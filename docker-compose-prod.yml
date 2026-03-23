@@ -34,7 +34,7 @@ services:
 
   planilha-calculos:
     build:
-      context: ../planilha_saacb
+      context: ../fitt/planilha_saacb
       dockerfile: Dockerfile
     container_name: planilha-calculos-prod
     ports:
@@ -43,7 +43,7 @@ services:
       - HOST=0.0.0.0
       - PORT=8000
     volumes:
-      - ../planilha_saacb:/app
+      - ../fitt/planilha_saacb:/app
       - planilha-prod-data:/app/data
     restart: unless-stopped
     networks:
