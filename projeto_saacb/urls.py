@@ -16,10 +16,12 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('tarefas/', include('tarefas.urls')),
     path('gru/', include('tarefas.gru.urls')),
-    
+
 ]
 
 # Servir static files
-if not settings.DEBUG:
+if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Sempre servir arquivos media (DEBUG ou não)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

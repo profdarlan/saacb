@@ -155,9 +155,9 @@
                 </div>
 
                 <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" name="gerar_pdf" id="gerar_pdf">
+                    <input class="form-check-input" type="checkbox" name="gerar_pdf" id="gerar_pdf" onchange="gerarEAnexarPDF(event)">
                     <label class="form-check-label" for="gerar_pdf">
-                        Gerar e salvar PDF do relatório
+                        Gerar e anexar PDF do relatório automaticamente
                     </label>
                 </div>
 
@@ -208,6 +208,94 @@
                 </div>
             </div>
 
+            <!-- Campos de Cálculo Salvos (se existirem) -->
+            <div id="calculos-salvos-section" class="card mb-4">
+                <div class="card-header">
+                    <h5>Dados de Cálculo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="valor-original-calculado">Valor Original Calculado</label>
+                                <input type="text" class="form-control" id="valor-original-calculado"
+                                       value="{{ tarefa.valor_original_calculado|default:'' }}"
+                                       placeholder="R$ 0,00" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="valor-corrigido-calculado">Valor Corrigido Calculado</label>
+                                <input type="text" class="form-control" id="valor-corrigido-calculado"
+                                       value="{{ tarefa.valor_corrigido_calculado|default:'' }}"
+                                       placeholder="R$ 0,00" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="valor-diferenca">Diferença Calculada</label>
+                                <input type="text" class="form-control" id="valor-diferenca"
+                                       value="{{ tarefa.valor_diferenca|default:'' }}"
+                                       placeholder="R$ 0,00" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="calculado-em">Calculado em</label>
+                                <input type="text" class="form-control" id="calculado-em"
+                                       value="{% if tarefa.calculado_em %}{{ tarefa.calculado_em|date:'d/m/Y H:i' }}{% endif %}"
+                                       placeholder="Não calculado" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upload de PDF e link existente -->
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="relatorio-pdf-upload">Anexar Relatório PDF</label>
+                                <input type="file" class="form-control" id="relatorio-pdf-upload"
+                                       accept=".pdf" onchange="uploadPDF(event)">
+                                <small class="form-text text-muted">
+                                    Selecione um PDF para anexar ao cálculo
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Relatório PDF Atual</label>
+                            {% if tarefa.relatorio_pdf %}
+                                <div class="mt-1">
+                                    <a href="{{ tarefa.relatorio_pdf.url }}" target="_blank"
+                                       class="btn btn-outline-info btn-sm">
+                                        📄 Ver Relatório PDF
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger btn-sm ms-2"
+                                            onclick="removerPDF()">
+                                        🗑️ Remover
+                                    </button>
+                                </div>
+                            {% else %}
+                                <p class="text-muted mt-1">Nenhum relatório anexado</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Status de aprovação -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="alert {% if tarefa.calculos_aprovados %}alert-success{% else %}alert-warning{% endif %}">
+                                <strong>Status dos Cálculos:</strong>
+                                {% if tarefa.calculos_aprovados %}
+                                    ✅ Aprovados e migrados para o campo Valor
+                                {% else %}
+                                    ⏳ Pendentes de aprovação
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Exportar e Aprovar Resultados -->
             <div id="exportar-section" class="card mb-4" style="display: none;">
                 <div class="card-header">
@@ -247,7 +335,25 @@
 
         </div>
     </div>
+
+<!-- Debug: Exibir dados de cálculo -->
+<div id="debug-section" class="card mb-4" style="display: none;">
+    <div class="card-header">
+        <h5>
+            🐛 Debug: Dados do Cálculo
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="alternarDebug()">
+                Ocultar
+            </button>
+        </h5>
+    </div>
+    <div class="card-body">
+        <pre id="debug-data" style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; font-size: 12px; max-height: 300px; overflow-y: auto;"></pre>
+    </div>
 </div>
+
+<button type="button" class="btn btn-outline-secondary btn-sm mb-4" onclick="alternarDebug()">
+    🐛 Mostrar Debug
+</button>
 
 <!-- Modal de Créditos Extraídos -->
 <div class="modal fade" id="modal-creditos" tabindex="-1" aria-labelledby="modalCreditosLabel" aria-hidden="true">
@@ -283,6 +389,69 @@
 
 <script>
 // ============================================================
+// DADOS SALVOS DA TAREFA (passados do Django)
+// ============================================================
+const DADOS_SALVOS_TAREFA = {
+    valor_original_calculado: {{ tarefa.valor_original_calculado|default:0 }},
+    valor_corrigido_calculado: {{ tarefa.valor_corrigido_calculado|default:0 }},
+    valor_diferenca: {{ tarefa.valor_diferenca|default:0 }},
+    detalhes_calculo: {% if tarefa.detalhes_calculo %}{{ tarefa.detalhes_calculo|safe }}{% else %}null{% endif %},
+    calculado_em: "{% if tarefa.calculado_em %}{{ tarefa.calculado_em|date:'d/m/Y H:i' }}{% endif %}",
+    calculos_aprovados: {{ tarefa.calculos_aprovados|lower|yesno:"true,false" }},
+    relatorio_pdf: "{% if tarefa.relatorio_pdf %}{{ tarefa.relatorio_pdf.url }}{% endif %}"
+};
+
+
+// ============================================================
+// CARREGAR ÍNDICES PADRÃO DA API EXTERNA
+// ============================================================
+async function carregarIndicesPadrao() {
+
+    try {
+        const response = await fetch(`${API_BASE}/api/indices-padrao`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            // 🔴 Bug 1: Pegar apenas data.indices, não o objeto inteiro
+            window.indicesPadrao = data.indices;
+        } else {
+            window.indicesPadrao = {};
+        }
+    } catch (error) {
+        window.indicesPadrao = {};
+    }
+}
+
+// ============================================================
+// FUNÇÕES DE DEBUG
+// ============================================================
+function alternarDebug() {
+    const section = document.getElementById('debug-section');
+    const btn = event.target;
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        atualizarDebug();
+        btn.textContent = '🐛 Ocultar Debug';
+    } else {
+        section.style.display = 'none';
+        btn.textContent = '🐛 Mostrar Debug';
+    }
+}
+
+function atualizarDebug() {
+    const debugData = document.getElementById('debug-data');
+    debugData.textContent = JSON.stringify({
+        dadosSalvosTarefa: DADOS_SALVOS_TAREFA,
+        windowResultados: window.resultadosEditaveis,
+        windowDadosPdf: window.dadosPdf,
+        ultimoResultado: window.ultimoResultado
+    }, null, 2);
+}
+
+// ============================================================
 // CONFIG
 // ============================================================
 const isProduction = window.location.hostname === 'saacb.lakeserver.online';
@@ -297,12 +466,13 @@ window.ultimoResultado = null;
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM carregado - iniciando inicializacao');
-    
+
     verificarStatusAPI();
     configurarUploadPDF();
     configurarModalCreditos();
     configurarFormulario();
+    carregarDadosSalvos();
+    carregarIndicesPadrao(); // 🟢 Carregar índices padrão da API externa se disponível
 });
 
 // ============================================================
@@ -410,7 +580,6 @@ async function processarPDF(file) {
         }
 
         const data = await response.json();
-        console.log('Resposta /api/upload-pdf:', data);
 
         window.dadosPdf = { creditos: data.creditos, beneficiario: data.beneficiario };
 
@@ -461,7 +630,6 @@ function configurarModalCreditos() {
     const btnVerCreditos = document.getElementById('btn-ver-creditos');
     const modalCreditos = document.getElementById('modal-creditos');
 
-    console.log('Configurando modal - botão:', btnVerCreditos, 'modal:', modalCreditos);
 
     if (!btnVerCreditos || !modalCreditos) {
         console.error('Elementos do modal não encontrados');
@@ -471,14 +639,12 @@ function configurarModalCreditos() {
     btnVerCreditos.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('Botão "Ver tabela" clicado');
         abrirModalCreditos();
     });
 }
 
 function abrirModalCreditos() {
     const creditos = window.dadosPdf.creditos || [];
-    console.log('abrirModalCreditos - creditos:', creditos);
 
     if (!creditos.length) {
         showAlert('Nenhum crédito para exibir. Faça upload do PDF primeiro.', 'warning');
@@ -510,7 +676,73 @@ function abrirModalCreditos() {
         backdrop: true
     });
     bootstrapModal.show();
-    console.log('Modal aberto com sucesso com ' + creditos.length + ' créditos');
+}
+
+// ============================================================
+// CARREGAR DADOS SALVOS
+// ============================================================
+function carregarDadosSalvos() {
+
+    // 🔴 Bug 1: Parse defensivo se detalhes_calculo vier como string
+    let detalhes = DADOS_SALVOS_TAREFA.detalhes_calculo;
+    if (typeof detalhes === 'string') {
+        try {
+            detalhes = JSON.parse(detalhes);
+        } catch (e) {
+            console.error('❌ Falha ao parsear detalhes_calculo:', e);
+            detalhes = null;
+        }
+    }
+
+    // Verificar se há cálculos salvos na tarefa
+    if (detalhes && detalhes.resultados && detalhes.resultados.length > 0) {
+
+        window.resultadosEditaveis = detalhes.resultados;
+
+        // Atualizar os totais
+        const totalOriginal = window.resultadosEditaveis.reduce((s, r) => s + r.valor_original, 0);
+        const totalCorrigido = window.resultadosEditaveis.reduce((s, r) => s + r.valor_corrigido, 0);
+
+        // Log dos índices salvos
+        window.resultadosEditaveis.forEach((r, i) => {
+            // 🔴 Bug 2: Usar fallback se indice_correcao for null/undefined
+            const indice = r.indice_correcao ?? 1.0;
+        });
+
+        // Preencher a tabela editável
+        const tbody = document.getElementById('tabela-resultados');
+        tbody.innerHTML = window.resultadosEditaveis.map((r, idx) => `
+            <tr data-idx="${idx}">
+                <td><input class="form-control form-control-sm" type="text" value="${r.competencia}" onchange="atualizarResultado(${idx}, 'competencia', this.value)"></td>
+                <td><input class="form-control form-control-sm" type="text" value="${r.periodo_inicio||''} a ${r.periodo_fim||''}" onchange="atualizarResultado(${idx}, 'periodo', this.value)" readonly></td>
+                <td><input class="form-control form-control-sm text-right" value="${formatMoeda(r.valor_original)}" onchange="atualizarResultado(${idx}, 'valor_original', this.value)"></td>
+                <td><input class="form-control form-control-sm text-right" type="number" step="0.0001" value="${(r.indice_correcao ?? 1.0).toFixed(4)}" onchange="atualizarResultado(${idx}, 'indice_correcao', this.value)"></td>
+                <td><input class="form-control form-control-sm text-right" value="${formatMoeda(r.valor_corrigido)}" onchange="atualizarResultado(${idx}, 'valor_corrigido', this.value)" readonly></td>
+                <td><input class="form-control form-control-sm text-right" value="${formatMoeda(r.diferenca)}" readonly></td>
+            </tr>
+        `).join('');
+
+        // Atualizar os totais
+        document.getElementById('total-original').textContent = formatMoeda(totalOriginal);
+        document.getElementById('total-corrigido').textContent = formatMoeda(totalCorrigido);
+        document.getElementById('total-diferenca').textContent = formatMoeda(totalCorrigido - totalOriginal);
+
+        // Atualizar campos de cálculo na seção "Dados de Cálculo"
+        document.getElementById('valor-original-calculado').value = formatMoeda(totalOriginal);
+        document.getElementById('valor-corrigido-calculado').value = formatMoeda(totalCorrigido);
+        document.getElementById('valor-diferenca').value = formatMoeda(totalCorrigido - totalOriginal);
+
+        // Mostrar as seções
+        document.getElementById('resultados-section').style.display = 'block';
+        document.getElementById('exportar-section').style.display = 'block';
+
+    } else {
+    }
+
+    // Atualizar debug se estiver visível
+    if (document.getElementById('debug-section')) {
+        atualizarDebug();
+    }
 }
 
 // ============================================================
@@ -552,17 +784,25 @@ async function realizarCalculo() {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Calculando...';
 
     try {
-        // Fazer cálculo local (sem depender da API externa)
-        const resultados = window.dadosPdf.creditos.map(c => ({
-            competencia: c.competencia,
-            periodo_inicio: c.periodo_inicio,
-            periodo_fim: c.periodo_fim,
-            valor_original: c.valor_original || 0,
-            // Usar índice 1.0 como padrão (usuário pode editar)
-            indice_correcao: 1.0,
-            valor_corrigido: c.valor_original || 0,
-            diferenca: 0
-        }));
+        // 🔴 Bug 2: Usar índices da API externa se disponíveis, senão 1.0
+        const resultados = window.dadosPdf.creditos.map(c => {
+            // Obter índice por competência do dict window.indicesPadrao
+            const competenciaKey = c.competencia;
+            const indice = window.indicesPadrao[competenciaKey] ?? 1.0;
+            const valorOriginal = c.valor_original || 0;
+            const valorCorrigido = valorOriginal * indice;
+
+
+            return {
+                competencia: c.competencia,
+                periodo_inicio: c.periodo_inicio,
+                periodo_fim: c.periodo_fim,
+                valor_original: valorOriginal,
+                indice_correcao: indice,  // 🔴 Bug 2: Índice da API ou 1.0 como fallback
+                valor_corrigido: valorCorrigido,
+                diferenca: valorCorrigido - valorOriginal
+            };
+        });
 
         const totalOriginal = resultados.reduce((s, r) => s + r.valor_original, 0);
         const totalCorrigido = resultados.reduce((s, r) => s + r.valor_corrigido, 0);
@@ -573,6 +813,8 @@ async function realizarCalculo() {
             diferenca: totalCorrigido - totalOriginal,
             resultados: resultados
         };
+
+        // Log dos índices usados
 
         exibirResultados(data);
         showAlert('Cálculo realizado! Edite os índices de correção conforme necessário.', 'success');
@@ -594,16 +836,22 @@ function exibirResultados(data) {
     document.getElementById('total-corrigido').textContent = formatMoeda(data.total_corrigido);
     document.getElementById('total-diferenca').textContent = formatMoeda(data.diferenca);
 
+    // Atualizar campos de cálculo na seção "Dados de Cálculo"
+    document.getElementById('valor-original-calculado').value = formatMoeda(data.total_original);
+    document.getElementById('valor-corrigido-calculado').value = formatMoeda(data.total_corrigido);
+    document.getElementById('valor-diferenca').value = formatMoeda(data.diferenca);
+
     window.resultadosEditaveis = JSON.parse(JSON.stringify(data.resultados));
     window.ultimoResultado = data;
 
     const tbody = document.getElementById('tabela-resultados');
+    // 🔴 Bug 2: Usar fallback se indice_correcao for null/undefined
     tbody.innerHTML = data.resultados.map((r, idx) => `
         <tr data-idx="${idx}">
             <td><input class="form-control form-control-sm" type="text" value="${r.competencia}" onchange="atualizarResultado(${idx}, 'competencia', this.value)"></td>
             <td><input class="form-control form-control-sm" type="text" value="${r.periodo_inicio||''} a ${r.periodo_fim||''}" onchange="atualizarResultado(${idx}, 'periodo', this.value)" readonly></td>
             <td><input class="form-control form-control-sm text-right" value="${formatMoeda(r.valor_original)}" onchange="atualizarResultado(${idx}, 'valor_original', this.value)"></td>
-            <td><input class="form-control form-control-sm text-right" type="number" step="0.0001" value="${r.indice_correcao.toFixed(4)}" onchange="atualizarResultado(${idx}, 'indice_correcao', this.value)"></td>
+            <td><input class="form-control form-control-sm text-right" type="number" step="0.0001" value="${(r.indice_correcao ?? 1.0).toFixed(4)}" onchange="atualizarResultado(${idx}, 'indice_correcao', this.value)"></td>
             <td><input class="form-control form-control-sm text-right" value="${formatMoeda(r.valor_corrigido)}" onchange="atualizarResultado(${idx}, 'valor_corrigido', this.value)" readonly></td>
             <td><input class="form-control form-control-sm text-right" value="${formatMoeda(r.diferenca)}" readonly></td>
         </tr>
@@ -612,6 +860,11 @@ function exibirResultados(data) {
     document.getElementById('resultados-section').style.display = 'block';
     document.getElementById('exportar-section').style.display = 'block';
     document.getElementById('resultados-section').scrollIntoView({ behavior: 'smooth' });
+
+    // Atualizar debug se estiver visível
+    if (document.getElementById('debug-section') && document.getElementById('debug-section').style.display !== 'none') {
+        atualizarDebug();
+    }
 }
 
 // ============================================================
@@ -620,36 +873,46 @@ function exibirResultados(data) {
 window.atualizarResultado = function(idx, campo, valor) {
     const r = window.resultadosEditaveis[idx];
     if (!r) return;
-    
+
+
     if (campo === 'competencia') r.competencia = valor;
     else if (campo === 'periodo') r.periodo_inicio = valor;
-    else if (campo === 'valor_original') { 
-        r.valor_original = parseMoeda(valor); 
-        recalcularLinha(idx); 
+    else if (campo === 'valor_original') {
+        r.valor_original = parseMoeda(valor);
+        recalcularLinha(idx);
     }
-    else if (campo === 'indice_correcao') { 
-        r.indice_correcao = parseFloat(valor) || 1; 
-        recalcularLinha(idx); 
+    else if (campo === 'indice_correcao') {
+        r.indice_correcao = parseFloat(valor) || 1;
+        recalcularLinha(idx);
     }
-    else if (campo === 'valor_corrigido') { 
-        r.valor_corrigido = parseMoeda(valor); 
-        r.diferenca = r.valor_corrigido - r.valor_original; 
+    else if (campo === 'valor_corrigido') {
+        r.valor_corrigido = parseMoeda(valor);
+        r.diferenca = r.valor_corrigido - r.valor_original;
     }
     atualizarTotais();
+
+    // Atualizar debug se estiver visível
+    if (document.getElementById('debug-section') && document.getElementById('debug-section').style.display !== 'none') {
+        atualizarDebug();
+    }
 };
 
 function recalcularLinha(idx) {
     const r = window.resultadosEditaveis[idx];
+    if (!r) return;
+
+    // Recalcular valores
     r.valor_corrigido = r.valor_original * r.indice_correcao;
     r.diferenca = r.valor_corrigido - r.valor_original;
-    
+
+
     const tr = document.querySelector(`tr[data-idx="${idx}"]`);
     if (tr) {
         const ins = tr.querySelectorAll('input');
-        ins[2].value = formatMoeda(r.valor_original);
-        ins[3].value = r.indice_correcao.toFixed(4);
-        ins[4].value = formatMoeda(r.valor_corrigido);
-        ins[5].value = formatMoeda(r.diferenca);
+        ins[2].value = formatMoeda(r.valor_original);  // Valor original
+        ins[3].value = r.indice_correcao.toFixed(4); // Índice
+        ins[4].value = formatMoeda(r.valor_corrigido); // Valor corrigido
+        ins[5].value = formatMoeda(r.diferenca);  // Diferença
     }
 }
 
@@ -660,6 +923,11 @@ function atualizarTotais() {
     document.getElementById('total-original').textContent = formatMoeda(totalOriginal);
     document.getElementById('total-corrigido').textContent = formatMoeda(totalCorrigido);
     document.getElementById('total-diferenca').textContent = formatMoeda(totalCorrigido - totalOriginal);
+
+    // Atualizar debug se estiver visível
+    if (document.getElementById('debug-section') && document.getElementById('debug-section').style.display !== 'none') {
+        atualizarDebug();
+    }
 }
 
 // ============================================================
@@ -688,6 +956,95 @@ function copiarResultados() {
     navigator.clipboard.writeText(txt).then(() => {
         showAlert('Copiado para a área de transferência!', 'success');
     });
+}
+
+async function gerarEAnexarPDF(event) {
+    const checkbox = event.target;
+
+    // Se foi desmarcado, não faz nada
+    if (!checkbox.checked) {
+        return;
+    }
+
+    // Se foi marcado, verifica se há resultados calculados
+    if (!window.resultadosEditaveis?.length) {
+        showAlert('Realize um cálculo primeiro', 'warning');
+        checkbox.checked = false;
+        return;
+    }
+
+    const btn = checkbox;
+    const textoOriginal = btn.parentElement.innerHTML;
+    btn.disabled = true;
+
+    try {
+        const tarefaId = '{{ tarefa.id }}';
+
+        // Tentar gerar o PDF e anexar via API externa
+        const payload = {
+            beneficiario: {
+                numero_beneficio: document.getElementById('numerobeneficio').value,
+                nome_titular: document.getElementById('nometitular').value,
+                periodo_debito_inicio: document.getElementById('periodoinicio').value,
+                periodo_debito_fim: document.getElementById('periodofim').value,
+                is_recebimento_indevido: document.getElementById('recebimentoindevido').checked
+            },
+            creditos: window.resultadosEditaveis.map(r => ({
+                competencia: r.competencia,
+                periodo_inicio: r.periodo_inicio,
+                periodo_fim: r.periodo_fim,
+                valor_original: r.valor_original
+            })),
+            indices: window.resultadosEditaveis.map(r => ({
+                competencia: r.competencia,
+                indice: r.indice_correcao
+            }))
+        };
+
+        // Gerar PDF via API externa
+        const pdfResponse = await fetch(`${API_BASE}/api/gerar-relatorio-pdf`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!pdfResponse.ok) {
+            throw new Error('Erro ao gerar PDF na API externa');
+        }
+
+        const pdfBlob = await pdfResponse.blob();
+
+        // Enviar o PDF gerado para a view de upload
+        const formData = new FormData();
+        formData.append('relatorio_pdf', pdfBlob, `relatorio_calculo_${tarefaId}.pdf`);
+
+        const uploadResponse = await fetch(`/tarefas/tarefa/${tarefaId}/upload-pdf/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: formData
+        });
+
+        if (!uploadResponse.ok) {
+            const error = await uploadResponse.json();
+            throw new Error('Erro ao anexar PDF: ' + (error.error || error.message));
+        }
+
+        showAlert('✅ PDF gerado e anexado com sucesso!', 'success');
+
+        // Recarregar a página para mostrar o novo PDF
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+
+    } catch (error) {
+        console.error('Erro ao gerar/anexar PDF:', error);
+        showAlert('Erro ao gerar/anexar PDF. Use o botão "Gerar PDF" manualmente.', 'error');
+        checkbox.checked = false;
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 async function gerarExcel() {
@@ -807,6 +1164,99 @@ function novoCalculo() {
 }
 
 // ============================================================
+// UPLOAD PDF
+// ============================================================
+async function uploadPDF(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+        showAlert('Por favor, selecione um arquivo PDF', 'error');
+        return;
+    }
+
+    const btn = event.target;
+    const textoOriginal = btn.disabled ? btn.innerHTML : null;
+    btn.disabled = true;
+
+    try {
+        const tarefaId = '{{ tarefa.id }}';
+        const formData = new FormData();
+        formData.append('relatorio_pdf', file);
+
+        const response = await fetch(`/tarefas/tarefa/${tarefaId}/upload-pdf/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao fazer upload do PDF');
+        }
+
+        showAlert('✅ PDF anexado com sucesso!', 'success');
+
+        // Recarregar a página para mostrar o novo PDF
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+
+    } catch (error) {
+        console.error('Erro ao fazer upload:', error);
+        showAlert('Erro: ' + error.message, 'error');
+        btn.disabled = false;
+    }
+}
+
+// ============================================================
+// REMOVER PDF
+// ============================================================
+async function removerPDF() {
+    if (!confirm('Tem certeza que deseja remover o relatório PDF?')) {
+        return;
+    }
+
+    try {
+        const tarefaId = '{{ tarefa.id }}';
+
+        const response = await fetch(`/tarefas/tarefa/${tarefaId}/remover-pdf/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao remover PDF');
+        }
+
+        showAlert('✅ PDF removido com sucesso!', 'success');
+
+        // Recarregar a página
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+
+    } catch (error) {
+        console.error('Erro ao remover PDF:', error);
+        showAlert('Erro: ' + error.message, 'error');
+    }
+}
+
+// Função auxiliar para obter token CSRF
+function getCsrfToken() {
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    return cookieValue || '';
+}
+
+// ============================================================
 // APROVAR E MIGRAR
 // ============================================================
 async function aprovarEMigrar() {
@@ -826,6 +1276,10 @@ async function aprovarEMigrar() {
         // 1. Primeiro salvar os resultados calculados na tarefa
         const totalOriginal = window.resultadosEditaveis.reduce((s, r) => s + r.valor_original, 0);
         const totalCorrigido = window.resultadosEditaveis.reduce((s, r) => s + r.valor_corrigido, 0);
+
+        // Log para verificar os índices
+        window.resultadosEditaveis.forEach((r, i) => {
+        });
 
         const salvarPayload = {
             total_original: totalOriginal,
@@ -847,6 +1301,7 @@ async function aprovarEMigrar() {
             throw new Error('Erro ao salvar: ' + (error.message || 'Erro desconhecido'));
         }
 
+
         // 2. Depois aprovar os cálculos
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Aprovando...';
 
@@ -866,6 +1321,21 @@ async function aprovarEMigrar() {
         }
 
         const data = await aprovarResponse.json();
+
+        // Atualizar campos de cálculo na interface
+        document.getElementById('valor-original-calculado').value = formatMoeda(totalOriginal);
+        document.getElementById('valor-corrigido-calculado').value = formatMoeda(totalCorrigido);
+        document.getElementById('valor-diferenca').value = formatMoeda(totalCorrigido - totalOriginal);
+
+        // Atualizar data de cálculo
+        const agora = new Date().toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        document.getElementById('calculado-em').value = agora;
 
         // Marcar checkbox como aprovado
         document.getElementById('calculos-aprovados').checked = true;

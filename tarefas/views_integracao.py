@@ -204,6 +204,18 @@ def salvar_resultados_calculo(request, tarefa_id):
         diferenca = data.get('diferenca', 0)
         resultados = data.get('resultados', [])
 
+        # Log para debug - verificar se índices estão sendo recebidos
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Salvando resultados para tarefa {tarefa_id}:")
+        logger.info(f"  Total Original: {total_original}")
+        logger.info(f"  Total Corrigido: {total_corrigido}")
+        logger.info(f"  Diferença: {diferenca}")
+        logger.info(f"  Quantidade de resultados: {len(resultados)}")
+        if resultados:
+            logger.info(f"  Primeiro resultado índice: {resultados[0].get('indice_correcao', 'N/A')}")
+            logger.info(f"  Último resultado índice: {resultados[-1].get('indice_correcao', 'N/A')}")
+
         # Atualizar tarefa com os resultados
         tarefa.valor_original_calculado = total_original
         tarefa.valor_corrigido_calculado = total_corrigido
@@ -228,6 +240,58 @@ def salvar_resultados_calculo(request, tarefa_id):
             'status': 'error',
             'message': str(e)
         }, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def upload_pdf_tarefa(request, tarefa_id):
+    """
+    Faz upload do PDF de relatório para a tarefa
+    """
+    tarefa = get_object_or_404(tarefassamc, id=tarefa_id)
+
+    if 'relatorio_pdf' not in request.FILES:
+        return JsonResponse({
+            'error': 'Nenhum arquivo PDF enviado'
+        }, status=400)
+
+    pdf_file = request.FILES['relatorio_pdf']
+
+    if not pdf_file.name.lower().endswith('.pdf'):
+        return JsonResponse({
+            'error': 'O arquivo deve ser um PDF'
+        }, status=400)
+
+    # Salvar o PDF
+    tarefa.relatorio_pdf = pdf_file
+    tarefa.save()
+
+    return JsonResponse({
+        'status': 'success',
+        'message': 'PDF anexado com sucesso',
+        'url': tarefa.relatorio_pdf.url if tarefa.relatorio_pdf else None
+    })
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def remover_pdf_tarefa(request, tarefa_id):
+    """
+    Remove o PDF de relatório da tarefa
+    """
+    tarefa = get_object_or_404(tarefassamc, id=tarefa_id)
+
+    if tarefa.relatorio_pdf:
+        # Deletar o arquivo físico
+        tarefa.relatorio_pdf.delete(save=False)
+        # Limpar o campo
+        tarefa.relatorio_pdf = None
+        tarefa.save()
+
+    return JsonResponse({
+        'status': 'success',
+        'message': 'PDF removido com sucesso'
+    })
 
 
 @require_http_methods(["POST"])

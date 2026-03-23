@@ -24,6 +24,8 @@ urlpatterns = [
     # URLs de Integração com Planilha Cálculos
     path('tarefa/<int:tarefa_id>/calcular/', integracao.calcular_creditos_tarefa, name='integracao_calcular_creditos'),
     path('tarefa/<int:tarefa_id>/salvar-resultados/', integracao.salvar_resultados_calculo, name='integracao_salvar_resultados'),
+    path('tarefa/<int:tarefa_id>/upload-pdf/', integracao.upload_pdf_tarefa, name='integracao_upload_pdf'),
+    path('tarefa/<int:tarefa_id>/remover-pdf/', integracao.remover_pdf_tarefa, name='integracao_remover_pdf'),
     path('tarefa/<int:tarefa_id>/aprovar-calculos/', integracao.aprovar_calculos_tarefa, name='integracao_aprovar_calculos'),
     path('api/calcular/', integracao.calcular_ajax, name='integracao_api_calcular'),
     path('tarefa/<int:tarefa_id>/pdf/', integracao.baixar_relatorio_pdf, name='integracao_baixar_pdf'),
