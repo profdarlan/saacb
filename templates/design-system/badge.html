@@ -1,0 +1,11 @@
+{# design-system/badge.html #}
+{# Uso: {% include "design-system/badge.html" with text="Pendente" variant="warning" %} #}
+{# Opções: text, variant (primary, success, warning, danger, info), icon, class #}
+
+{% load static %}
+
+<span class="ds-badge ds-badge-{{ variant|default:'primary' }} {{ class|default:'' }}">
+    {% if icon %}<i class="bi bi-{{ icon }}{% if text %} me-1{% endif %}"></i>{% endif %}
+    {% if text %}{{ text }}{% endif %}
+    {% block badge_content %}{% endblock %}
+</span>

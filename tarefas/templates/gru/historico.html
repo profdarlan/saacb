@@ -1,0 +1,154 @@
+<!-- 
+📁 tarefas/gru/templates/gru/historico.html
+Listagem de GRUs consultadas
+-->
+
+{% extends 'gru/base.html' %}
+
+{% block title %}Histórico - GRU{% endblock %}
+
+{% block gru_content %}
+
+<div style="display: grid; grid-template-columns: 1fr 300px; gap: 30px; margin-bottom: 30px;">
+    
+    <!-- Filtros -->
+    <div style="background: white; padding: 20px; border-radius: 8px; height: fit-content;">
+        <h3 style="margin-top: 0; color: #667eea;">🔍 Filtros</h3>
+        
+        <form method="get" style="display: flex; flex-direction: column; gap: 15px;">
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Número GRU:</label>
+                <input type="text" name="numero" placeholder="Buscar..." 
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Status:</label>
+                <select name="status" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">Todos</option>
+                    <option value="PENDENTE">Pendente</option>
+                    <option value="PAGO">Pago</option>
+                    <option value="VENCIDO">Vencido</option>
+                </select>
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Data Início:</label>
+                <input type="date" name="data_inicio" 
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Data Fim:</label>
+                <input type="date" name="data_fim" 
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            
+            <button type="submit" style="background: #667eea; color: white; padding: 10px; border: none; border-radius: 4px; font-weight: 500; cursor: pointer;">
+                🔍 Filtrar
+            </button>
+        </form>
+    </div>
+    
+    <!-- Listagem -->
+    <div style="grid-column: 1;">
+        <h2 style="margin-top: 0;">Histórico de Consultas</h2>
+        
+        {% if consultas %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                        <th style="padding: 15px; text-align: left; font-weight: 600; color: #333;">GRU</th>
+                        <th style="padding: 15px; text-align: left; font-weight: 600; color: #333;">Status</th>
+                        <th style="padding: 15px; text-align: left; font-weight: 600; color: #333;">Valor</th>
+                        <th style="padding: 15px; text-align: left; font-weight: 600; color: #333;">Data</th>
+                        <th style="padding: 15px; text-align: center; font-weight: 600; color: #333;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for consulta in consultas %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 15px;">
+                            <strong>{{ consulta.numero }}</strong>
+                        </td>
+                        <td style="padding: 15px;">
+                            {% if consulta.status == 'PAGO' %}
+                                <span style="background: #d4edda; color: #155724; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                    ✓ {{ consulta.status }}
+                                </span>
+                            {% elif consulta.status == 'PENDENTE' %}
+                                <span style="background: #fff3cd; color: #856404; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                    ⏱ {{ consulta.status }}
+                                </span>
+                            {% elif consulta.status == 'VENCIDO' %}
+                                <span style="background: #f8d7da; color: #721c24; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                    ✗ {{ consulta.status }}
+                                </span>
+                            {% else %}
+                                <span style="background: #d1ecf1; color: #0c5460; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">
+                                    ℹ {{ consulta.status }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 15px;">
+                            R$ {{ consulta.valor|floatformat:2 }}
+                        </td>
+                        <td style="padding: 15px; color: #666; font-size: 14px;">
+                            {{ consulta.data_consulta|date:'d/m/Y H:i' }}
+                        </td>
+                        <td style="padding: 15px; text-align: center;">
+                            <a href="{% url 'gru:download_pdf' consulta.numero %}" 
+                               style="background: #667eea; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: 500;"
+                               title="Baixar PDF">
+                                📥 PDF
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginação -->
+        {% if is_paginated %}
+        <div style="margin-top: 30px; text-align: center;">
+            <nav style="display: inline-flex; gap: 10px;">
+                {% if page_obj.has_previous %}
+                <a href="?page=1" style="padding: 8px 12px; background: white; border: 1px solid #ddd; border-radius: 4px; text-decoration: none;">
+                    « Primeira
+                </a>
+                <a href="?page={{ page_obj.previous_page_number }}" style="padding: 8px 12px; background: white; border: 1px solid #ddd; border-radius: 4px; text-decoration: none;">
+                    ‹ Anterior
+                </a>
+                {% endif %}
+                
+                <span style="padding: 8px 12px; background: #667eea; color: white; border-radius: 4px;">
+                    {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                </span>
+                
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" style="padding: 8px 12px; background: white; border: 1px solid #ddd; border-radius: 4px; text-decoration: none;">
+                    Próxima ›
+                </a>
+                <a href="?page={{ page_obj.paginator.num_pages }}" style="padding: 8px 12px; background: white; border: 1px solid #ddd; border-radius: 4px; text-decoration: none;">
+                    Última »
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div style="background: #f8f9fa; padding: 40px; border-radius: 8px; text-align: center;">
+            <p style="color: #666; margin: 0;">
+                📭 Nenhuma GRU consultada ainda.<br>
+                <a href="{% url 'gru:consultar' %}" style="color: #667eea;">Faça sua primeira consulta</a>
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

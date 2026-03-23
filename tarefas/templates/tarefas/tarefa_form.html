@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if object %}Editar{% else %}Criar{% endif %} Tarefa - SAACB</title>
+    {% load static %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'tarefas:tarefa_list' %}">
+                <i class="bi bi-check-circle-fill me-2"></i>SAACB - GERENCIAMENTO DE TAREFAS - PROJETO 13'S
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <span class="navbar-text me-3">
+                            <i class="bi bi-person-circle me-1"></i>Olá, {{ user.get_full_name|default:user.username }}!
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin:index' %}">
+                            <i class="bi bi-gear me-1"></i>Admin
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin:logout' %}">
+                            <i class="bi bi-box-arrow-right me-1"></i>Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="card-title mb-0">
+                            <i class="bi bi-pencil-square me-2"></i>
+                            {% if object %}Editar Tarefa{% else %}Criar Nova Tarefa{% endif %}
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+
+                            {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                <ul class="mb-0">
+                                    {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+
+                            <div class="form-section">
+                                <h4><i class="bi bi-person me-2"></i>Informações do Interessado</h4>
+                                <div class="row">
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.nome_interessado.id_for_label }}" class="form-label required-field">{{ form.nome_interessado.label }}</label>
+                                        {{ form.nome_interessado }}
+                                        {% if form.nome_interessado.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.nome_interessado.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.CPF.id_for_label }}" class="form-label">{{ form.CPF.label }}</label>
+                                        {{ form.CPF }}
+                                        {% if form.CPF.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.CPF.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h4><i class="bi bi-file-earmark-text me-2"></i>Detalhes da Tarefa</h4>
+                                <div class="row">
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.servico.id_for_label }}" class="form-label required-field">{{ form.servico.label }}</label>
+                                        {{ form.servico }}
+                                        {% if form.servico.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.servico.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.nome_tarefa.id_for_label }}" class="form-label">{{ form.nome_tarefa.label }}</label>
+                                        {{ form.nome_tarefa }}
+                                        {% if form.nome_tarefa.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.nome_tarefa.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.tarefa_n.id_for_label }}" class="form-label">{{ form.tarefa_n.label }}</label>
+                                        {{ form.tarefa_n }}
+                                        {% if form.tarefa_n.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.tarefa_n.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.tarefa_a.id_for_label }}" class="form-label">{{ form.tarefa_a.label }}</label>
+                                        {{ form.tarefa_a }}
+                                        {% if form.tarefa_a.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.tarefa_a.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.sei_n.id_for_label }}" class="form-label">{{ form.sei_n.label }}</label>
+                                        {{ form.sei_n }}
+                                        {% if form.sei_n.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.sei_n.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.procj.id_for_label }}" class="form-label">{{ form.procj.label }}</label>
+                                        {{ form.procj }}
+                                        {% if form.procj.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.procj.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.nome_serv.id_for_label }}" class="form-label">{{ form.nome_serv.label }}</label>
+                                        {{ form.nome_serv }}
+                                        {% if form.nome_serv.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.nome_serv.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.der_tarefa.id_for_label }}" class="form-label">{{ form.der_tarefa.label }}</label>
+                                        {{ form.der_tarefa }}
+                                        {% if form.der_tarefa.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.der_tarefa.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h4><i class="bi bi-cash me-2"></i>Benefícios e Situação</h4>
+                                <div class="row">
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.nb1.id_for_label }}" class="form-label">{{ form.nb1.label }}</label>
+                                        {{ form.nb1 }}
+                                        {% if form.nb1.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.nb1.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.nb2.id_for_label }}" class="form-label">{{ form.nb2.label }}</label>
+                                        {{ form.nb2 }}
+                                        {% if form.nb2.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.nb2.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.sit_ben.id_for_label }}" class="form-label">{{ form.sit_ben.label }}</label>
+                                        {{ form.sit_ben }}
+                                        {% if form.sit_ben.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.sit_ben.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-12 mb-4">
+                                        <label for="{{ form.aps.id_for_label }}" class="form-label">{{ form.aps.label }}</label>
+                                        {{ form.aps }}
+                                        {% if form.aps.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.aps.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.Competencia.id_for_label }}" class="form-label">{{ form.Competencia.label }}</label>
+                                    {{ form.Competencia }}
+                                    {% if form.Competencia.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.Competencia.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.data_irregular.id_for_label }}" class="form-label">{{ form.data_irregular.label }}</label>
+                                    {{ form.data_irregular }}
+                                    {% if form.data_irregular.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.data_irregular.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.data_ci.id_for_label }}" class="form-label">{{ form.data_ci.label }}</label>
+                                    {{ form.data_ci }}
+                                    {% if form.data_ci.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.data_ci.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.prazo.id_for_label }}" class="form-label">{{ form.prazo.label }}</label>
+                                    {{ form.prazo }}
+                                    {% if form.prazo.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.prazo.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.defesa_ap.id_for_label }}" class="form-label">{{ form.defesa_ap.label }}</label>
+                                    {{ form.defesa_ap }}
+                                    {% if form.defesa_ap.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.defesa_ap.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.Conclusao.id_for_label }}" class="form-label">{{ form.Conclusao.label }}</label>
+                                    {{ form.Conclusao }}
+                                    {% if form.Conclusao.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.Conclusao.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.tip_con.id_for_label }}" class="form-label">{{ form.tip_con.label }}</label>
+                                    {{ form.tip_con }}
+                                    {% if form.tip_con.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.tip_con.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.resp_credito.id_for_label }}" class="form-label">{{ form.resp_credito.label }}</label>
+                                    {{ form.resp_credito }}
+                                    {% if form.resp_credito.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.resp_credito.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4><i class="bi bi-exclamation-triangle me-2"></i>Irregularidades e Ofícios</h4>
+                            <div class="row">
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.categoria.id_for_label }}" class="form-label">{{ form.categoria.label }}</label>
+                                    {{ form.categoria }}
+                                    {% if form.categoria.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.categoria.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.Periodo_irregular.id_for_label }}" class="form-label">{{ form.Periodo_irregular.label }}</label>
+                                    {{ form.Periodo_irregular }}
+                                    {% if form.Periodo_irregular.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.Periodo_irregular.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.valor.id_for_label }}" class="form-label">{{ form.valor.label }}</label>
+                                    {{ form.valor }}
+                                    {% if form.valor.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.valor.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.oficio1.id_for_label }}" class="form-label">{{ form.oficio1.label }}</label>
+                                    {{ form.oficio1 }}
+                                    {% if form.oficio1.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.oficio1.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.AR1.id_for_label }}" class="form-label">{{ form.AR1.label }}</label>
+                                    {{ form.AR1 }}
+                                    {% if form.AR1.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.oficio1.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.oficio2.id_for_label }}" class="form-label">{{ form.oficio2.label }}</label>
+                                    {{ form.oficio2 }}
+                                    {% if form.oficio2.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.oficio2.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.AR2.id_for_label }}" class="form-label">{{ form.AR2.label }}</label>
+                                    {{ form.AR2 }}
+                                    {% if form.AR2.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.AR.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <h4><i class="bi bi-person-badge me-2"></i>Responsável Legal</h4>
+                            <div class="row">
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.responsavel.id_for_label }}" class="form-label">{{ form.responsavel.label }}</label>
+                                    {{ form.responsavel }}
+                                    {% if form.responsavel.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.responsavel.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.CPF_R.id_for_label }}" class="form-label">{{ form.CPF_R.label }}</label>
+                                    {{ form.CPF_R }}
+                                    {% if form.CPF_R.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.CPF_R.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4><i class="bi bi-textarea me-2"></i>Análise da Cobrança</h4>
+                            <div class="row">
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.es_conc.id_for_label }}" class="form-label">{{ form.es_conc.label }}</label>
+                                    {{ form.es_conc }}
+                                    {% if form.es_conc.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.es_conc.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.obs1.id_for_label }}" class="form-label">{{ form.obs1.label }}</label>
+                                    {{ form.obs1 }}
+                                    {% if form.obs1.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.obs1.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.obs2.id_for_label }}" class="form-label">{{ form.obs2.label }}</label>
+                                    {{ form.obs2 }}
+                                    {% if form.obs2.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.obs2.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.env_serv.id_for_label }}" class="form-label">{{ form.env_serv.label }}</label>
+                                    {{ form.env_serv }}
+                                    {% if form.env_serv.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.env_serv.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.servidor.id_for_label }}" class="form-label">{{ form.servidor.label }}</label>
+                                    {{ form.servidor }}
+                                    {% if form.servidor.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.servidor.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <h4><i class="bi bi-check-circle me-2"></i>Conclusão e Status</h4>
+                            <div class="row">
+
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
+                                    {{ form.status }}
+                                    {% if form.status.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.status.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-12 mb-4">
+                                    <label for="{{ form.historico.id_for_label }}" class="form-label">{{ form.historico.label }}</label>
+                                    {{ form.historico }}
+                                    {% if form.historico.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.historico.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'tarefas:tarefa_list' %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Voltar
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle me-2"></i>Salvar Tarefa
+                            </button>
+                        </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

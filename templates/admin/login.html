@@ -1,0 +1,171 @@
+
+
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+
+<!-- Meta viewport para responsividade -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Bootstrap -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+<style>
+/* Remove interferência do Django Admin */
+#header, #branding, #footer, .breadcrumbs {
+    display: none !important;
+}
+
+/* Corpo da página */
+body.login {
+    background: linear-gradient(135deg, #141414 0%, #2482e7 100%) !important;
+    min-height: 100vh;
+    margin: 0;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Container centralizado */
+.login-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 4px 25px rgba(0,0,0,0.15);
+    margin: 0 auto;
+}
+
+/* Ajuste para o conteúdo do Django Admin */
+#content-start, #content-main {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+/* Card do login */
+.login-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 4px 25px rgba(0,0,0,0.15);
+}
+
+/* Título */
+.login-card h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #007bff;
+    text-align: center;
+    margin-bottom: .5rem;
+}
+
+/* Subtítulo */
+.login-card p.subtitle {
+    text-align: center;
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+}
+
+/* Inputs */
+.login-card input[type="text"],
+.login-card input[type="password"] {
+    width: 100%;
+    padding: .65rem;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    font-size: 1rem;
+}
+
+/* Botão */
+.login-card .btn-login {
+    width: 100%;
+    padding: .75rem;
+    font-size: 1rem;
+    border-radius: 6px;
+}
+
+body.login {
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+
+
+
+
+/* Erros */
+.errornote {
+    background: #f8d7da;
+    color: #721c24;
+    padding: .75rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    font-size: .9rem;
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+    .login-card {
+        padding: 1.5rem;
+        max-width: 320px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} login{% endblock %}
+{% block usertools %}{% endblock %}
+{% block nav-sidebar %}{% endblock %}
+{% block skip_to_content %}{% endblock %}
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div class="login-card">
+
+    <h1>SAACB GEXCON</h1>
+    <p class="subtitle">Sistema de Gestão de Tarefas</p>
+
+    {% if form.errors %}
+        <div class="errornote">
+            {% if form.errors.items|length == 1 %}
+                {% blocktranslate trimmed %}Please correct the error below.{% endblocktranslate %}
+            {% else %}
+                {% blocktranslate trimmed %}Please correct the errors below.{% endblocktranslate %}
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <form action="{{ app_path }}" method="post" id="login-form">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label for="{{ form.username.id_for_label }}" class="form-label required">
+                {% blocktranslate trimmed %}Username:{% endblocktranslate %}
+            </label>
+            {{ form.username }}
+        </div>
+
+        <div class="mb-3">
+            <label for="{{ form.password.id_for_label }}" class="form-label required">
+                {% blocktranslate trimmed %}Password:{% endblocktranslate %}
+            </label>
+            {{ form.password }}
+        </div>
+
+        {% if redirect_field_name %}
+            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary btn-login">
+            {% blocktranslate trimmed %}Log in{% endblocktranslate %}
+        </button>
+    </form>
+</div>
+{% endblock %}

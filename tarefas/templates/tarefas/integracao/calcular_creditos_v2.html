@@ -1,0 +1,913 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3>📊 Calcular Créditos</h3>
+            <small>Tarefa #{{ tarefa.id }} - {{ tarefa.nome_interessado|default:"Sem nome" }}</small>
+        </div>
+        <div class="card-body">
+
+            <!-- Informações da Tarefa -->
+            <div class="alert alert-info">
+                <h6>📋 Informações da Tarefa</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <strong>👤 Nome:</strong> {{ tarefa.nome_interessado|default:"-" }}<br>
+                            <strong>📄 CPF:</strong> {{ tarefa.CPF|default:"-" }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <strong>💰 NB1:</strong> {{ tarefa.nb1|default:"-" }}<br>
+                            <strong>💰 NB2:</strong> {{ tarefa.nb2|default:"-" }}
+                        </p>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <strong>📅 Competência:</strong> {{ tarefa.Competencia|date:"m/Y"|default:"-" }}<br>
+                            <strong>📅 Período Irregular:</strong> {{ tarefa.Periodo_irregular|default:"-" }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <strong>💵 Valor:</strong> {{ tarefa.valor|default:"-" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status da API -->
+            <div id="api-status" class="alert alert-warning">
+                <strong>🔌 Status API:</strong>
+                <span id="api-status-text">Verificando...</span>
+            </div>
+
+            <!-- Upload do PDF -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>📄 Upload do PDF (Relação Detalhada de Créditos)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="upload-area" id="pdf-upload" style="border: 2px dashed #ccc; padding: 2rem; text-align: center; border-radius: 4px; cursor: pointer;">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📁</div>
+                        <p><strong>Clique ou arraste o arquivo PDF aqui</strong></p>
+                        <p style="font-size: 0.85rem; color: #666;">Formato: Relação Detalhada de Créditos (INSS)</p>
+                    </div>
+                    <input type="file" id="pdf-file" accept=".pdf" style="display: none;">
+                    <div id="pdf-name" style="margin-top: 0.75rem; font-weight: 500;"></div>
+                    <div id="pdf-status" style="margin-top: 0.5rem; font-size: 0.85rem;"></div>
+                </div>
+            </div>
+
+            <!-- Preview dos Dados Extraídos -->
+            <div id="preview-section" class="card mb-4" style="display: none;">
+                <div class="card-header">
+                    <h5>✅ Dados Extraídos do PDF</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p><strong>Número do Benefício:</strong></p>
+                            <p id="preview-nb" style="font-size: 1.1rem;">-</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Nome do Titular:</strong></p>
+                            <p id="preview-nome" style="font-size: 1.1rem;">-</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>Créditos Encontrados:</strong></p>
+                            <p id="preview-qtd" style="font-size: 1.1rem;">-</p>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-outline-info btn-sm" id="btn-ver-creditos">
+                            👁️ Ver tabela completa dos créditos extraídos
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {% if erro %}
+            <div class="alert alert-danger">
+                <strong>❌ Erro:</strong> {{ erro }}
+            </div>
+            {% endif %}
+
+            <!-- Formulário de Cálculo -->
+            <form method="post" id="form-calcular">
+                {% csrf_token %}
+
+                <!-- Dados do Beneficiário (Editáveis) -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>👤 Dados do Beneficiário (Editáveis)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="numerobeneficio">Número do Benefício</label>
+                                    <input type="text" class="form-control" id="numerobeneficio" name="numerobeneficio"
+                                           placeholder="Ex: 1247744709" required
+                                           value="{{ tarefa.nb1|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="nometitular">Nome do Titular</label>
+                                    <input type="text" class="form-control" id="nometitular" name="nometitular"
+                                           placeholder="Ex: Ana Maria Vieira Silva" required
+                                           value="{{ tarefa.nome_interessado|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="periodoinicio">Período Débito (Início)</label>
+                                    <input type="month" class="form-control" id="periodoinicio" name="periodoinicio" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="periodofim">Período Débito (Fim)</label>
+                                    <input type="month" class="form-control" id="periodofim" name="periodofim" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="recebimentoindevido">Recebimento indevido?</label>
+                                    <div style="margin-top: 0.5rem;">
+                                        <input type="checkbox" id="recebimentoindevido" name="recebimentoindevido">
+                                        <span>Sim</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" name="gerar_pdf" id="gerar_pdf">
+                    <label class="form-check-label" for="gerar_pdf">
+                        📄 Gerar e salvar PDF do relatório
+                    </label>
+                </div>
+
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary" id="btn-calcular">
+                        ⚡ Realizar Cálculo
+                    </button>
+                    <a href="{% url 'tarefas:tarefa_detail' tarefa.id %}" class="btn btn-secondary">
+                        ← Voltar
+                    </a>
+                </div>
+            </form>
+
+            <!-- Resultados do Cálculo (Tabela Editável) -->
+            <div id="resultados-section" class="card mb-4" style="display: none;">
+                <div class="card-header">
+                    <h5>📊 Detalhamento dos Cálculos (Editável)</h5>
+                    <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 1rem;">
+                        Edite os valores diretamente na tabela. As alterações serão refletidas automaticamente nos totais e nas exportações.
+                    </p>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 110px;">Competência</th>
+                                    <th style="width: 200px;">Período</th>
+                                    <th style="width: 140px;" class="text-right">Valor Original</th>
+                                    <th style="width: 90px;" class="text-right">Índice</th>
+                                    <th style="width: 140px;" class="text-right">Valor Corrigido</th>
+                                    <th style="width: 140px;" class="text-right">Diferença</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-resultados">
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-primary">
+                                    <td colspan="2" class="text-end"><strong>Total:</strong></td>
+                                    <td class="text-end"><strong id="total-original">R$ 0,00</strong></td>
+                                    <td></td>
+                                    <td class="text-end"><strong id="total-corrigido">R$ 0,00</strong></td>
+                                    <td class="text-end"><strong id="total-diferenca">R$ 0,00</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exportar Resultados -->
+            <div id="exportar-section" class="mt-4" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>📤 Exportar Resultados</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-secondary" onclick="copiarResultados()">
+                                📋 Copiar
+                            </button>
+                            <button type="button" class="btn btn-success" onclick="gerarExcel()">
+                                📊 Baixar Excel
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="gerarPDF()">
+                                📄 Gerar PDF
+                            </button>
+                            <button type="button" class="btn btn-outline" onclick="novoCalculo()">
+                                🔄 Novo Cálculo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Créditos Extraídos -->
+<div class="modal fade" id="modal-creditos" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">📄 Créditos Extraídos do PDF</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>Competência</th>
+                                <th>Período Início</th>
+                                <th>Período Fim</th>
+                                <th class="text-right">Valor Original</th>
+                                <th class="text-center">13º</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-tabela-creditos">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const isProduction = window.location.hostname === 'saacb.lakeserver.online';
+const API_BASE = isProduction ? '/api/' : 'http://192.168.1.51:8002';
+
+window.dadosPdf = { creditos: [], beneficiario: null };
+window.indicesPadrao = {};
+window.resultadosEditaveis = [];
+window.ultimoResultado = null;
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', async () => {
+    await carregarIndicesPadrao();
+    configurarUploadPDF();
+    configurarUploadConfiguracoes();
+});
+
+// ============================================================
+// TABS
+// ============================================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(tab).classList.add('active');
+        if (tab === 'historico') carregarHistorico();
+        if (tab === 'configuracoes') carregarStatusConfiguracoes();
+    });
+});
+
+// ============================================================
+// INDICES
+// ============================================================
+async function carregarIndicesPadrao() {
+    const el = document.getElementById('indices-status');
+    try {
+        const r = await fetch(`${API_BASE}/api/indices-padrao`);
+        const data = await r.json();
+        window.indicesPadrao = data.indices;
+        if (el) el.innerHTML = data.quantidade > 0
+            ? `<span style="color: var(--success)">&#x2705; ${data.quantidade} índices carregados</span>`
+            : `<span style="color: var(--warning)">&#x26A0; Configure os índices na aba Configurações</span>`;
+    } catch {
+        if (el) el.innerHTML = `<span style="color: var(--warning)">&#x26A0; Configure os índices na aba Configurações</span>`;
+    }
+}
+
+async function carregarStatusConfiguracoes() {
+    try {
+        const r = await fetch(`${API_BASE}/api/configuracoes/indices`);
+        const data = await r.json();
+        document.getElementById('config-qtd').textContent = data.quantidade + ' competências';
+        document.getElementById('config-atualizado').textContent = data.atualizado_em
+            ? new Date(data.atualizado_em).toLocaleString('pt-BR')
+            : 'Não configurado';
+    } catch(e) { console.error('Erro status config:', e); }
+}
+
+// ============================================================
+// UPLOAD PDF
+// ============================================================
+function configurarUploadPDF() {
+    const area = document.getElementById('pdf-upload');
+    const input = document.getElementById('pdf-file');
+    area.addEventListener('click', () => input.click());
+    
+    ['dragenter','dragover','dragleave','drop'].forEach(ev =>
+        area.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
+    
+    ['dragenter','dragover'].forEach(ev =>
+        area.addEventListener(ev, () => area.classList.add('dragover')));
+    
+    ['dragleave','drop'].forEach(ev =>
+        area.addEventListener(ev, () => area.classList.remove('dragover')));
+    
+    area.addEventListener('drop', e => {
+        if (e.dataTransfer.files[0]) processarPDF(e.dataTransfer.files[0]);
+    });
+    
+    input.addEventListener('change', e => {
+        if (e.target.files[0]) processarPDF(e.target.files[0]);
+    });
+}
+
+async function processarPDF(file) {
+    if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
+        showAlert('Por favor, selecione um arquivo PDF', 'error');
+        return;
+    }
+
+    const nameEl = document.getElementById('pdf-name');
+    const statusEl = document.getElementById('pdf-status');
+    
+    nameEl.innerHTML = `<span style="color: var(--warning)">&#x23F3; Processando ${file.name}...</span>`;
+    statusEl.textContent = '';
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const resp = await fetch(`${API_BASE}/api/upload-pdf`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.detail || 'Erro ao processar PDF');
+        }
+
+        const data = await resp.json();
+        console.log('Resposta /api/upload-pdf:', data);
+
+        // Persiste globalmente
+        window.dadosPdf = { creditos: data.creditos, beneficiario: data.beneficiario };
+
+        // ── Auto-preenche NB e Nome ───────────────────────────
+        if (data.beneficiario?.numero_beneficio)
+            document.getElementById('numerobeneficio').value = data.beneficiario.numero_beneficio;
+        if (data.beneficiario?.nome_titular)
+            document.getElementById('nometitular').value = data.beneficiario.nome_titular;
+
+        // ── Auto-preenche Período (primeira e última competência) ──
+        if (data.primeira_competencia) {
+            const v = compParaMes(data.primeira_competencia);
+            if (v) document.getElementById('periodoinicio').value = v;
+        }
+        if (data.ultima_competencia) {
+            const v = compParaMes(data.ultima_competencia);
+            if (v) document.getElementById('periodofim').value = v;
+        }
+
+        // ── Atualiza preview ──────────────────────────────────
+        document.getElementById('preview-nb').textContent = data.beneficiario?.numero_beneficio || '—';
+        document.getElementById('preview-nome').textContent = data.beneficiario?.nome_titular || '—';
+        document.getElementById('preview-qtd').textContent = data.quantidade + ' créditos';
+        document.getElementById('preview-section').style.display = 'block';
+        document.getElementById('preview-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        nameEl.innerHTML = `<span style="color: var(--success)">&#x2705; ${file.name}</span>`;
+        statusEl.textContent = data.quantidade + ' créditos extraídos com sucesso!';
+        showAlert(`PDF processado com sucesso! ${data.quantidade} créditos extraídos.`, 'success');
+
+    } catch (err) {
+        console.error('Erro processarPDF:', err);
+        nameEl.innerHTML = `<span style="color: var(--danger)">&#x274C; Erro: ${err.message}</span>`;
+        statusEl.textContent = '';
+        showAlert('Erro: ' + err.message, 'error');
+    }
+}
+
+// "07/2002" -> "2002-07"
+function compParaMes(comp) {
+    const m = comp && comp.match(/^(\d{2})\/(\d{4})$/);
+    return m ? `${m[2]}-${m[1]}` : null;
+}
+
+// ============================================================
+// MODAL CREDITOS
+// ============================================================
+function abrirModalCreditos() {
+    const creditos = window.dadosPdf.creditos || [];
+    console.log('abrirModalCreditos - creditos:', creditos);
+    console.log('window.dadosPdf:', window.dadosPdf);
+    console.log('Elemento modal:', document.getElementById('modal-creditos'));
+    console.log('Elemento tabela:', document.getElementById('modal-tabela-creditos'));
+    
+    if (!creditos.length) {
+        showAlert('Nenhum crédito para exibir', 'error');
+        return;
+    }
+
+    const tbody = document.getElementById('modal-tabela-creditos');
+    console.log('tbody antes:', tbody);
+    if (!tbody) {
+        console.error('Elemento modal-tabela-creditos não encontrado!');
+        showAlert('Erro interno: tabela de créditos não encontrada', 'error');
+        return;
+    }
+
+    console.log('Preenchendo tbody com', creditos.length, 'créditos');
+    tbody.innerHTML = creditos.map(c => `
+        <tr>
+            <td>${c.competencia}</td>
+            <td>${c.periodo_inicio || '—'}</td>
+            <td>${c.periodo_fim || '—'}</td>
+            <td class="text-right" style="font-family: 'Courier New', monospace;">${fmt(c.valor_original)}</td>
+            <td class="text-center">${c.tem_decimo ? '✅' : '—'}</td>
+        </tr>
+    `).join('');
+    
+    console.log('tbody após:', tbody);
+    console.log('Modal element antes de add active:', document.getElementById('modal-creditos'));
+    
+    const modal = document.getElementById('modal-creditos');
+    if (modal) {
+        console.log('Adicionando classe active ao modal');
+        modal.classList.add('active');
+        
+        // Bloquear clique no modal (não fechar ao clicar dentro)
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                e.stopPropagation();
+            }
+        });
+        
+        // Forçar exibição
+        modal.style.display = 'flex';
+    } else {
+        console.error('Elemento modal-creditos não encontrado!');
+    }
+}
+
+function fecharModalCreditos() {
+    const modal = document.getElementById('modal-creditos');
+    console.log('fecharModalCreditos - modal:', modal);
+    if (modal) {
+        console.log('Removendo classe active do modal');
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+    }
+}
+
+// Event listeners corretos
+document.addEventListener('DOMContentLoaded', function() {
+    const btnVerCreditos = document.getElementById('btn-ver-creditos');
+    const modalCreditos = document.getElementById('modal-creditos');
+    
+    console.log('Inicializando modal - botão:', btnVerCreditos, 'modal:', modalCreditos);
+    
+    if (btnVerCreditos) {
+        // Remover listeners antigos (se houver)
+        const novoBtn = btnVerCreditos.cloneNode(true);
+        btnVerCreditos.parentNode.replaceChild(novoBtn, btnVerCreditos);
+        console.log('Botão recriado:', novoBtn);
+    }
+    
+    if (modalCreditos) {
+        // Event listener correto para o botão
+        modalCreditos.addEventListener('click', function(e) {
+            console.log('Modal clicked, target:', e.target);
+            
+            // Se clicou no modal (fundo), ignorar
+            if (e.target === modalCreditos || modalCreditos.contains(e.target)) {
+                console.log('Clique no modal - ignorando fechar');
+                e.stopPropagation();
+                return;
+            }
+            
+            // Se clicou no botão, abrir o modal
+            abrirModalCreditos();
+        });
+        
+        // Event listener para o botão de fechar
+        const btnFechar = modalCreditos.querySelector('.close');
+        if (btnFechar) {
+            btnFechar.addEventListener('click', function(e) {
+                e.stopPropagation();
+                fecharModalCreditos();
+            });
+        }
+    }
+});
+
+// ============================================================
+// UPLOAD CONFIGURAÇÕES
+// ============================================================
+function configurarUploadConfiguracoes() {
+    const area = document.getElementById('config-upload');
+    const input = document.getElementById('config-file');
+    area.addEventListener('click', () => input.click());
+    
+    ['dragenter','dragover','dragleave','drop'].forEach(ev =>
+        area.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
+    
+    ['dragenter','dragover'].forEach(ev =>
+        area.addEventListener(ev, () => area.classList.add('dragover')));
+    
+    ['dragleave','drop'].forEach(ev =>
+        area.addEventListener(ev, () => area.classList.remove('dragover')));
+    
+    area.addEventListener('drop', e => {
+        if (e.dataTransfer.files[0]) processarConfiguracao(e.dataTransfer.files[0]);
+    });
+    
+    input.addEventListener('change', e => {
+        if (e.target.files[0]) processarConfiguracao(e.target.files[0]);
+    });
+}
+
+async function processarConfiguracao(file) {
+    if (!file || !file.name.match(/\.(xlsx|csv|xls)$/i)) {
+        showAlert('Selecione um arquivo Excel ou CSV', 'error');
+        return;
+    }
+    document.getElementById('config-name').textContent = 'Processando...';
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const r = await fetch(`${API_BASE}/api/configuracoes/indices`, {
+            method: 'POST',
+            body: formData
+        });
+        if (!r.ok) { const e = await r.json(); throw new Error(e.detail); }
+        const data = await r.json();
+        window.indicesPadrao = data.indices;
+        await carregarStatusConfiguracoes();
+        await carregarIndicesPadrao();
+        document.getElementById('config-name').innerHTML = `<span style="color: var(--success)">&#x2705; ${file.name}</span>`;
+        showAlert(`${data.quantidade} índices salvos com sucesso!`, 'success');
+    } catch(e) { showAlert('Erro: ' + e.message, 'error'); }
+}
+
+async function exportarIndices() {
+    try {
+        const r = await fetch(`${API_BASE}/api/configuracoes/indices/exportar`);
+        if (!r.ok) throw new Error('Erro ao exportar');
+        const blob = await r.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `indices_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.click();
+        showAlert('Índices exportados!', 'success');
+    } catch(e) { showAlert('Erro: ' + e.message, 'error'); }
+}
+
+async function limparIndices() {
+    if (!confirm('Remover TODOS os índices configurados?')) return;
+    try {
+        const r = await fetch(`${API_BASE}/api/configuracoes/indices`, {
+            method: 'DELETE'
+        });
+        if (!r.ok) throw new Error('Erro ao remover');
+        window.indicesPadrao = {};
+        await carregarStatusConfiguracoes();
+        await carregarIndicesPadrao();
+        showAlert('Índices removidos com sucesso', 'success');
+    } catch(e) { showAlert('Erro: ' + e.message, 'error'); }
+}
+
+// ============================================================
+// CÁLCULO
+// ============================================================
+async function realizarCalculo() {
+    const nb = document.getElementById('numerobeneficio').value.trim();
+    const nome = document.getElementById('nometitular').value.trim();
+    const inicio = document.getElementById('periodoinicio').value;
+    const fim = document.getElementById('periodofim').value;
+    const indev = document.getElementById('recebimentoindevido').checked;
+
+    if (!nb || !nome || !inicio || !fim) {
+        showAlert('Preencha todos os dados do beneficiário', 'error');
+        return;
+    }
+    if (!window.dadosPdf.creditos?.length) {
+        showAlert('Faça upload do PDF primeiro', 'error');
+        return;
+    }
+
+    // Recarrega índices do servidor para garantir que estão atualizados
+    await carregarIndicesPadrao();
+
+    if (!Object.keys(window.indicesPadrao).length) {
+        showAlert('Configure os índices na aba Configurações', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('btn-calcular');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Calculando...';
+
+    try {
+        const payload = {
+            beneficiario: {
+                numero_beneficio: nb,
+                nome_titular: nome,
+                periodo_debito_inicio: inicio,
+                periodo_debito_fim: fim,
+                is_recebimento_indevido: indev
+            },
+            creditos: window.dadosPdf.creditos,
+            indices: Object.entries(window.indicesPadrao).map(([c, i]) => ({ competencia: c, indice: i }))
+        };
+
+        console.log('Payload enviado para /api/calcular:', payload);
+
+        const r = await fetch(`${API_BASE}/api/calcular`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!r.ok) {
+            const e = await r.json();
+            throw new Error(e.detail || 'Erro ao calcular');
+        }
+
+        const data = await r.json();
+        exibirResultados(data);
+        salvarNoHistorico(data);
+    } catch(e) {
+        showAlert('Erro: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '&#x26A1; Realizar Cálculo';
+    }
+}
+
+function exibirResultados(data) {
+    document.getElementById('total-original').textContent = fmt(data.total_original);
+    document.getElementById('total-corrigido').textContent = fmt(data.total_corrigido);
+    document.getElementById('total-diferenca').textContent = fmt(data.diferenca);
+
+    window.resultadosEditaveis = JSON.parse(JSON.stringify(data.resultados));
+    window.ultimoResultado = data;
+
+    const tbody = document.getElementById('tabela-resultados');
+    tbody.innerHTML = data.resultados.map((r, idx) => `
+        <tr data-idx="${idx}">
+            <td><input class="form-control form-control-sm" type="text" value="${r.competencia}" onchange="atualizarResultado(${idx}, 'competencia', this.value)"></td>
+            <td><input class="form-control form-control-sm" type="text" value="${r.periodo_inicio||''} a ${r.periodo_fim||''}" onchange="atualizarResultado(${idx}, 'periodo', this.value)" readonly></td>
+            <td><input class="form-control form-control-sm text-right" value="${fmt(r.valor_original)}" onchange="atualizarResultado(${idx}, 'valor_original', this.value)"></td>
+            <td><input class="form-control form-control-sm text-right" type="number" step="0.0001" value="${r.indice_correcao.toFixed(4)}" onchange="atualizarResultado(${idx}, 'indice_correcao', this.value)"></td>
+            <td><input class="form-control form-control-sm text-right" value="${fmt(r.valor_corrigido)}" onchange="atualizarResultado(${idx}, 'valor_corrigido', this.value)" readonly></td>
+            <td><input class="form-control form-control-sm text-right" value="${fmt(r.diferenca)}" readonly></td>
+        </tr>
+    `).join('');
+
+    document.getElementById('resultados-section').style.display = 'block';
+    document.getElementById('exportar-section').style.display = 'block';
+    document.getElementById('resultados-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+window.atualizarResultado = function(idx, campo, valor) {
+    const r = window.resultadosEditaveis[idx];
+    if (!r) return;
+    if (campo === 'competencia') r.competencia = valor;
+    else if (campo === 'periodo') r.periodo_inicio = valor;
+    else if (campo === 'valor_original') { r.valor_original = parseMoeda(valor); recalcularLinha(idx); }
+    else if (campo === 'indice_correcao') { r.indice_correcao = parseFloat(valor) || 1; recalcularLinha(idx); }
+    else if (campo === 'valor_corrigido') { r.valor_corrigido = parseMoeda(valor); r.diferenca = r.valor_corrigido - r.valor_original; }
+    atualizarTotais();
+};
+
+function recalcularLinha(idx) {
+    const r = window.resultadosEditaveis[idx];
+    r.valor_corrigido = r.valor_original * r.indice_correcao;
+    r.diferenca = r.valor_corrigido - r.valor_original;
+    const tr = document.querySelector(`tr[data-idx="${idx}"]`);
+    if (tr) {
+        const ins = tr.querySelectorAll('input');
+        ins[3].value = fmt(r.valor_original);
+        ins[4].value = r.indice_correcao.toFixed(4);
+        ins[5].value = fmt(r.valor_corrigido);
+        ins[6].value = fmt(r.diferenca);
+    }
+}
+
+function atualizarTotais() {
+    const totalOriginal = window.resultadosEditaveis.reduce((s, r) => s + r.valor_original, 0);
+    const totalCorrigido = window.resultadosEditaveis.reduce((s, r) => s + r.valor_corrigido, 0);
+    document.getElementById('total-original').textContent = fmt(totalOriginal);
+    document.getElementById('total-corrigido').textContent = fmt(totalCorrigido);
+    document.getElementById('total-diferenca').textContent = fmt(totalCorrigido - totalOriginal);
+}
+
+function obterDadosTabela() {
+    return window.resultadosEditaveis.map(r => ({
+        competencia: r.competencia,
+        periodo_inicio: r.periodo_inicio,
+        periodo_fim: r.periodo_fim,
+        valor_original: r.valor_original,
+        indice_correcao: r.indice_correcao,
+        valor_corrigido: r.valor_corrigido,
+        diferenca: r.diferenca
+    }));
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function copiarResultados() {
+    if (!window.resultadosEditaveis?.length) {
+        showAlert('Realize um cálculo primeiro', 'error');
+        return;
+    }
+    const d = obterDadosTabela();
+    const txt = [
+        '=== CÁLCULADORA DE CRÉDITOS ===',
+        `Beneficiário: ${document.getElementById('nometitular').value}`,
+        `NB: ${document.getElementById('numerobeneficio').value}`,
+        `Período: ${document.getElementById('periodoinicio').value} a ${document.getElementById('periodofim').value}`,
+        '', 'RESUMO',
+        `Total Original: ${fmt(d.reduce((s, r) => s + r.valor_original, 0))}`,
+        `Total Corrigido: ${fmt(d.reduce((s, r) => s + r.valor_corrigido, 0))}`,
+        `Diferença: ${fmt(d.reduce((s, r) => s + r.diferenca, 0))}`,
+        '', 'DETALHES',
+        ...d.map(r => `${r.competencia} ${(r.periodo_inicio || '')} a ${(r.periodo_fim || '')} ${fmt(r.valor_original)} x${r.indice_correcao.toFixed(4)} = ${fmt(r.valor_corrigido)}`)
+    ].join('\n');
+    navigator.clipboard.writeText(txt).then(() => showAlert('Copiado para a área de transferência!', 'success'));
+}
+
+async function gerarExcel() {
+    if (!window.resultadosEditaveis?.length) {
+        showAlert('Realize um cálculo primeiro', 'error');
+        return;
+    }
+    const dt = obterDadosTabela();
+    const payload = { beneficiario: { numero_beneficio: document.getElementById('numerobeneficio').value, nome_titular: document.getElementById('nometitular').value, periodo_debito_inicio: document.getElementById('periodoinicio').value, periodo_debito_fim: document.getElementById('periodofim').value, is_recebimento_indevido: document.getElementById('recebimentoindevido').checked }, creditos: dt.map(r => ({ competencia: r.competencia, periodo_inicio: r.periodo_inicio, periodo_fim: r.periodo_fim, valor_original: r.valor_original })), indices: dt.map(r => ({ competencia: r.competencia, indice: r.indice_correcao })) };
+    try {
+        const r = await fetch(`${API_BASE}/api/gerar-excel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!r.ok) throw new Error('Erro ao gerar Excel');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(await r.blob());
+        a.download = `resultado_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.click();
+        showAlert('Excel gerado!', 'success');
+    } catch(e) { showAlert('Erro: ' + e.message, 'error'); }
+}
+
+async function gerarPDF() {
+    if (!window.resultadosEditaveis?.length) {
+        showAlert('Realize um cálculo primeiro', 'error');
+        return;
+    }
+    const dt = obterDadosTabela();
+    const payload = { beneficiario: { numero_beneficio: document.getElementById('numerobeneficio').value, nome_titular: document.getElementById('nometitular').value, periodo_debito_inicio: document.getElementById('periodoinicio').value, periodo_debito_fim: document.getElementById('periodofim').value, is_recebimento_indevido: document.getElementById('recebimentoindevido').checked }, creditos: dt.map(r => ({ competencia: r.competencia, periodo_inicio: r.periodo_inicio, periodo_fim: r.periodo_fim, valor_original: r.valor_original })), indices: dt.map(r => ({ competencia: r.competencia, indice: r.indice_correcao })) };
+    try {
+        const r = await fetch(`${API_BASE}/api/gerar-relatorio-pdf`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!r.ok) throw new Error('Erro ao gerar PDF');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(await r.blob());
+        a.download = `relatorio_${new Date().toISOString().slice(0, 10)}.pdf`;
+        a.click();
+        showAlert('PDF gerado!', 'success');
+    } catch(e) { showAlert('Erro: ' + e.message, 'error'); }
+}
+
+// ============================================================
+// LIMPAR
+// ============================================================
+function limparFormulario() {
+    ['numerobeneficio','nometitular','periodoinicio','periodofim'].forEach(id =>
+        document.getElementById(id).value = '');
+    document.getElementById('recebimentoindevido').checked = false;
+    document.getElementById('pdf-file').value = '';
+    document.getElementById('pdf-name').textContent = '';
+    window.dadosPdf = { creditos: [], beneficiario: null };
+    window.resultadosEditaveis = [];
+    document.getElementById('preview-section').style.display = 'none';
+    document.getElementById('resultados-section').style.display = 'none';
+    document.getElementById('exportar-section').style.display = 'none';
+    document.getElementById('alerts').innerHTML = '';
+    showAlert('Formulário limpo!', 'info');
+}
+
+function novoCalculo() {
+    limparFormulario();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ============================================================
+// HISTÓRICO
+// ============================================================
+function salvarNoHistorico(resultado) {
+    let h = JSON.parse(localStorage.getItem('historico') || '[]');
+    h.unshift(resultado);
+    localStorage.setItem('historico', JSON.stringify(h.slice(0, 20)));
+}
+
+function carregarHistorico() {
+    const h = JSON.parse(localStorage.getItem('historico') || '[]');
+    const div = document.getElementById('lista-historico');
+    if (!h.length) {
+        div.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#x1F4CB;</div><p>Nenhum cálculo realizado ainda</p></div>';
+        return;
+    }
+    div.innerHTML = h.map((item, i) => `
+        <div class="history-item" onclick="carregarDoHistorico(${i})">
+            <div class="history-info">
+                <h3>${item.beneficiario.nome_titular}</h3>
+                <p>NB: ${item.beneficiario.numero_beneficio}</p>
+                <p>${new Date(item.timestamp).toLocaleString('pt-BR')}</p>
+            </div>
+            <div class="history-value">${fmt(item.total_corrigido)}</div>
+        </div>
+    `).join('');
+}
+
+function carregarDoHistorico(idx) {
+    const h = JSON.parse(localStorage.getItem('historico') || '[]');
+    const r = h[idx];
+    if (!r) return;
+    document.getElementById('numerobeneficio').value = r.beneficiario.numero_beneficio;
+    document.getElementById('nometitular').value = r.beneficiario.nome_titular;
+    document.getElementById('periodoinicio').value = r.beneficiario.periodo_debito_inicio;
+    document.getElementById('periodofim').value = r.beneficiario.periodo_debito_fim;
+    document.getElementById('recebimentoindevido').checked = r.beneficiario.is_recebimento_indevido;
+    window.dadosPdf = { creditos: r.resultados.map(x => ({ competencia: x.competencia, periodo_inicio: x.periodo_inicio, periodo_fim: x.periodo_fim, valor_original: x.valor_original })), beneficiario: r.beneficiario };
+    exibirResultados(r);
+    document.querySelector('[data-tab="calculo"]').click();
+    showAlert('Cálculo carregado do histórico!', 'success');
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function showAlert(msg, type = 'success') {
+    const div = document.getElementById('alerts');
+    const el = document.createElement('div');
+    el.className = `alert alert-${type}`;
+    el.innerHTML = `<span>${msg}</span>`;
+    div.appendChild(el);
+    setTimeout(() => el.remove(), 5000);
+}
+
+const fmt = v => new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+}).format(v || 0);
+
+function parseMoeda(s) {
+    if (!s) return 0;
+    const v = parseFloat(s.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.'));
+    return isNaN(v) ? 0 : v;
+}
+</script>
+{% endblock %}

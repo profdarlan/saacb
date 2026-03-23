@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Confirmar Exclusão - SAACB{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- Header -->
+    <div class="mb-4">
+        <h1 class="h2 mb-1">
+            <i class="bi bi-exclamation-triangle text-danger me-2"></i>Confirmar Exclusão
+        </h1>
+        <p class="text-muted mb-0">Tem certeza que deseja excluir esta tarefa?</p>
+    </div>
+
+    <!-- Alerta de Confirmação -->
+    <div class="alert alert-danger border-0 shadow-sm">
+        <div class="d-flex align-items-start">
+            <i class="bi bi-exclamation-triangle-fill me-3 fs-3"></i>
+            <div>
+                <h5 class="alert-heading">Atenção!</h5>
+                <p class="mb-2">Você está prestes a excluir a tarefa:</p>
+                <div class="bg-white bg-opacity-25 p-3 rounded mb-3">
+                    <strong>Nome:</strong> {{ object.nome_interessado|default:"Sem Nome" }}<br>
+                    {% if object.tarefa_n %}
+                    <strong>Tarefa:</strong> {{ object.tarefa_n }}<br>
+                    {% endif %}
+                    {% if object.pk %}
+                    <strong>ID:</strong> #{{ object.pk }}
+                    {% endif %}
+                </div>
+                <p class="mb-0"><strong>Esta ação não pode ser desfeita!</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações da Tarefa -->
+    {% include "design-system/card.html" with title="Informações da Tarefa" icon="info-circle" no_footer=True %}
+        <div class="row g-2">
+            <div class="col-md-6">
+                <strong>Interessado:</strong> {{ object.nome_interessado|default:"-" }}
+            </div>
+            <div class="col-md-6">
+                <strong>CPF:</strong> {{ object.CPF|default:"-" }}
+            </div>
+            <div class="col-md-6">
+                <strong>SEI:</strong> {{ object.sei_n|default:"-" }}
+            </div>
+            <div class="col-md-6">
+                <strong>Processo:</strong> {{ object.procj|default:"-" }}
+            </div>
+            <div class="col-12">
+                <strong>Serviço:</strong> {{ object.get_servico_display|default:object.servico|default:"-" }}
+            </div>
+            <div class="col-12">
+                <strong>Status:</strong>
+                {% if object.status == 'CONCLUIDA_FINALIZADA' %}
+                {% include "design-system/badge.html" with text="Finalizada" variant="success" %}
+                {% elif object.status == 'CONCLUIDA_INTERMEDIARIA' %}
+                {% include "design-system/badge.html" with text="Intermediária" variant="info" %}
+                {% else %}
+                {% include "design-system/badge.html" with text=object.status variant="warning" %}
+                {% endif %}
+            </div>
+        </div>
+    {% endinclude %}
+
+    <!-- Botões de Ação -->
+    <form method="post" class="mt-4">
+        {% csrf_token %}
+        <div class="d-flex gap-3">
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash me-2"></i>Sim, excluir
+            </button>
+            <a href="{% url 'tarefas:tarefa_detail' object.pk %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Cancelar
+            </a>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

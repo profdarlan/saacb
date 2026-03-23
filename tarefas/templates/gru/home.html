@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}GRU - Guia de Recolhimento da União{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gru-dashboard { padding: 20px; }
+    .gru-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white; padding: 30px; border-radius: 10px;
+        margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .gru-header h1 { margin: 0 0 10px 0; font-size: 2.5em; font-weight: 700; }
+    .gru-header p { margin: 0; font-size: 1.1em; opacity: 0.95; }
+
+    .stats-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px; margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white; border-radius: 10px; padding: 25px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s; border-left: 4px solid;
+    }
+    .stat-card:hover { transform: translateY(-5px); }
+    .stat-card.pendente { border-color: #fbbf24; }
+    .stat-card.consultada { border-color: #3b82f6; }
+    .stat-card.paga { border-color: #10b981; }
+    .stat-card.vencida { border-color: #ef4444; }
+
+    .stat-card h3 {
+        margin: 0 0 10px 0; font-size: 0.9em; text-transform: uppercase;
+        color: #6b7280; font-weight: 600;
+    }
+    .stat-card .number {
+        font-size: 2.5em; font-weight: 700; color: #1f2937; margin: 10px 0;
+    }
+    .stat-card .description { font-size: 0.9em; color: #6b7280; }
+
+    .info-section {
+        background: white; border-radius: 10px; padding: 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); margin-bottom: 20px;
+    }
+    .info-section h2 {
+        margin: 0 0 15px 0; font-size: 1.5em; color: #1f2937;
+    }
+    .info-section p { line-height: 1.8; color: #4b5563; margin-bottom: 10px; }
+    .info-section ul {
+        list-style: none; padding: 0; margin: 20px 0;
+    }
+    .info-section li {
+        padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #374151;
+    }
+    .info-section li:last-child { border-bottom: none; }
+    .info-section li strong { color: #1f2937; }
+
+    .alert-info {
+        background: #dbeafe; border-left: 4px solid #3b82f6;
+        padding: 15px; border-radius: 5px; margin-bottom: 20px;
+    }
+    .alert-info p { margin: 0; color: #1e40af; }
+
+    @media (max-width: 768px) {
+        .gru-header h1 { font-size: 1.8em; }
+        .stats-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gru-dashboard">
+    <!-- Cabeçalho -->
+    <div class="gru-header">
+        <h1>📄 Sistema GRU - Guia de Recolhimento da União</h1>
+        <p>Consulte, gerencie e acompanhe Guias de Recolhimento da União - SAACB/INSS</p>
+    </div>
+
+    <!-- Estatísticas -->
+    <div class="stats-grid">
+        <div class="stat-card pendente">
+            <h3>GRUs Pendentes</h3>
+            <div class="number">{{ stats.pendentes|default:0 }}</div>
+            <div class="description">Aguardando recolhimento</div>
+        </div>
+        <div class="stat-card consultada">
+            <h3>Total Consultadas</h3>
+            <div class="number">{{ stats.total_grus|default:0 }}</div>
+            <div class="description">Registros no sistema</div>
+        </div>
+        <div class="stat-card paga">
+            <h3>GRUs Pagas</h3>
+            <div class="number">{{ stats.pagas|default:0 }}</div>
+            <div class="description">Recolhimento confirmado</div>
+        </div>
+        <div class="stat-card vencida">
+            <h3>GRUs Vencidas</h3>
+            <div class="number">{{ stats.vencidas|default:0 }}</div>
+            <div class="description">Necessitam atenção</div>
+        </div>
+    </div>
+
+    <!-- Ações rápidas e GRUs recentes do usuário -->
+    <div class="info-section">
+        <h2>⚡ Ações rápidas</h2>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;">
+            <a href="{% url 'gru:list' %}" class="stat-card consultada" style="padding:12px 18px;text-decoration:none;color:inherit;border-radius:8px;">
+                📄 Listar GRUs
+            </a>
+            <a href="{% url 'gru:create' %}" class="stat-card paga" style="padding:12px 18px;text-decoration:none;color:inherit;border-radius:8px;">
+                ➕ Gerar nova GRU
+            </a>
+            <a href="{% url 'gru:consultar' %}" class="stat-card consultada" style="padding:12px 18px;text-decoration:none;color:inherit;border-radius:8px;">
+                🔎 Consultar GRU (API)
+            </a>
+        </div>
+
+        <h2 style="margin-top:20px;">🗂️ Suas GRUs recentes</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:12px;">
+            {% if recent_grus %}
+                {% for gru in recent_grus %}
+                    <div class="stat-card {% if gru.status == 'PENDENTE' %}pendente{% elif gru.status == 'PAGA' %}paga{% elif gru.status == 'VENCIDA' %}vencida{% else %}consultada{% endif %}">
+                        <h3>{{ gru.codigo_recolhimento|default:'-' }}</h3>
+                        <div class="number">R$ {{ gru.valor }}</div>
+                        <div class="description">{{ gru.beneficiario_nome|default:gru.beneficiario_cpf }}</div>
+                        <div style="margin-top:8px;font-size:0.9em;color:#6b7280;">Venc.: {{ gru.vencimento|date:'d/m/Y'|default:'-' }}</div>
+                        <div style="margin-top:8px;display:flex;gap:8px;">
+                            {% if gru.pdf_file %}
+                                <a href="{% url 'gru:download_pdf' gru.pdf_file.name|cut:'gru_pdfs/' %}" class="stat-card consultada" style="padding:6px 10px;text-decoration:none;color:inherit;border-radius:6px;">⬇️ PDF</a>
+                            {% endif %}
+                            <a href="{% url 'gru:list' %}" class="stat-card" style="padding:6px 10px;text-decoration:none;color:inherit;border-radius:6px;">Detalhes</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div style="grid-column:1 / -1;color:#6b7280;">Nenhuma GRU gerada por você ainda. Use "Gerar nova GRU" para criar uma.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

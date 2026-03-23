@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gerar GRU{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gru-create { padding: 24px; max-width: 980px; margin: 0 auto; }
+    .gru-create .card { background:white;padding:20px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.06);}    
+    .form-row { display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+    .form-row label { font-weight:600; display:block; margin-bottom:6px; }
+    .form-row input, .form-row textarea, .form-row select { width:100%; padding:8px;border-radius:6px;border:1px solid #ddd; }
+    .btn-primary { background:#10b981;color:white;padding:10px 16px;border-radius:6px;border:none; }
+    .btn-muted { background:#ef4444;color:white;padding:10px 16px;border-radius:6px;border:none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gru-create">
+    <div class="card">
+        <h1>➕ Gerar nova GRU</h1>
+        <p style="color:#6b7280;">Preencha os dados abaixo e clique em "Gerar GRU" para salvar e gerar o PDF.</p>
+
+        <form method="post" action="{% url 'gru:create' %}">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            <div class="form-row">
+                <div>
+                    {{ form.beneficiario_nome.label_tag }}
+                    {{ form.beneficiario_nome }}
+                    {{ form.beneficiario_nome.errors }}
+                </div>
+                <div>
+                    {{ form.beneficiario_cpf.label_tag }}
+                    {{ form.beneficiario_cpf }}
+                    {{ form.beneficiario_cpf.errors }}
+                </div>
+                <div>
+                    {{ form.codigo_recolhimento.label_tag }}
+                    {{ form.codigo_recolhimento }}
+                    {{ form.codigo_recolhimento.errors }}
+                </div>
+                <div>
+                    {{ form.competencia.label_tag }}
+                    {{ form.competencia }}
+                    {{ form.competencia.errors }}
+                </div>
+                <div>
+                    {{ form.vencimento.label_tag }}
+                    {{ form.vencimento }}
+                    {{ form.vencimento.errors }}
+                </div>
+                <div>
+                    {{ form.valor.label_tag }}
+                    {{ form.valor }}
+                    {{ form.valor.errors }}
+                </div>
+                <div style="grid-column:1 / -1;">
+                    {{ form.descricao.label_tag }}
+                    {{ form.descricao }}
+                    {{ form.descricao.errors }}
+                </div>
+            </div>
+
+            <div style="margin-top:12px;display:flex;gap:8px;">
+                <button type="submit" class="btn-primary">Gerar GRU</button>
+                <a href="{% url 'gru:home' %}" class="btn-muted" style="display:inline-block;text-decoration:none;line-height:30px;">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

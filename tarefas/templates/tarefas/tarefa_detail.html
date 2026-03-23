@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% load static %}
+{% load meus_filtros %}
+
+{% block title %}Detalhes da Tarefa #{{ object.pk }} - SAACB{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tab-content {
+        min-height: 300px;
+    }
+    .ds-card {
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1">
+                <i class="bi bi-info-circle me-2"></i>Detalhes da Tarefa #{{ object.pk }}
+            </h1>
+            <p class="text-muted mb-0">{{ object.nome_interessado|default:"Sem Nome" }}</p>
+        </div>
+
+        <!-- Dropdown de Documentos -->
+        <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-file-earmark-text me-2"></i>Gerar Documentos
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+                <li><h6 class="dropdown-header">Despachos</h6></li>
+                <li><a class="dropdown-item" href="{% url 'tarefas:gerar_documento' object.pk 'despacho' %}" target="_blank">
+                    <i class="bi bi-file-text me-2"></i>Despacho de Instauração
+                </a></li>
+                <li><a class="dropdown-item" href="{% url 'tarefas:gerar_documento' object.pk 'despacho_tutela' %}" target="_blank">
+                    <i class="bi bi-file-text me-2"></i>Despacho de Tutela/Liminar Cassada
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">Ofícios</h6></li>
+                <li><a class="dropdown-item" href="{% url 'tarefas:gerar_documento' object.pk 'oficio_defesa' %}" target="_blank">
+                    <i class="bi bi-file-earmark-text me-2"></i>Ofício de Defesa
+                </a></li>
+                <li><a class="dropdown-item" href="{% url 'tarefas:gerar_documento' object.pk 'oficio_defesa_tutela' %}" target="_blank">
+                    <i class="bi bi-file-earmark-text me-2"></i>Ofício de Defesa Tutela/Liminar Cassada
+                </a></li>
+                <li><a class="dropdown-item" href="{% url 'tarefas:gerar_documento' object.pk 'oficio_recurso' %}" target="_blank">
+                    <i class="bi bi-file-earmark-text me-2"></i>Ofício de Cobrança/Recurso
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">Análises</h6></li>
+                <li><a class="dropdown-item" href="{% url 'tarefas:gerar_documento' object.pk 'analise_tutela' %}" target="_blank">
+                    <i class="bi bi-file-text me-2"></i>Análise de Tutela/Liminar Cassada
+                </a></li>
+                <li><a class="dropdown-item" href="{% url 'tarefas:gerar_documento' object.pk 'analise_defesa' %}" target="_blank">
+                    <i class="bi bi-file-text me-2"></i>Relatório de Análise da Defesa
+                </a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Card de Resumo -->
+    <div class="ds-card">
+        <div class="ds-card-header">
+            <i class="bi bi-person-circle me-2"></i>Resumo
+        </div>
+        <div class="ds-card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="mb-2">
+                        <span class="badge bg-light text-dark me-2">#{{ object.pk }}</span>
+                        <span class="badge bg-light text-dark me-2">
+                            <i class="bi bi-hash me-1"></i>{{ object.tarefa_n|default:"Sem número" }}
+                        </span>
+                        {% if object.sei_n %}
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-link me-1"></i>SEI: {{ object.sei_n }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted mb-0">
+                        <strong>{{ object|get_label:'CPF' }}:</strong> {{ object.CPF|default:"-" }}
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    {% if object.status == 'CONCLUIDA_FINALIZADA' %}
+                    {% include "design-system/badge.html" with text="Finalizada" variant="success" icon="check-circle" %}
+                    {% elif object.status == 'CONCLUIDA_INTERMEDIARIA' %}
+                    {% include "design-system/badge.html" with text="Intermediária" variant="info" icon="arrow-clockwise" %}
+                    {% elif object.status == 'PENDENTE - CORREÇÃO' %}
+                    {% include "design-system/badge.html" with text="Correção" variant="danger" icon="exclamation-triangle" %}
+                    {% else %}
+                    {% include "design-system/badge.html" with text="Pendente" variant="warning" icon="clock" %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Abas -->
+    <ul class="nav nav-tabs nav-fill mb-3 shadow-sm rounded-top" id="tarefaTab" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#geral">
+                <i class="bi bi-person me-2"></i>Dados Gerais
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#beneficio">
+                <i class="bi bi-cash-coin me-2"></i>Benefício e Débito
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#processual">
+                <i class="bi bi-file-earmark-text me-2"></i>Tramitação e Defesa
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#analise">
+                <i class="bi bi-file-text me-2"></i>Análise e Fatos
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content bg-white shadow-sm rounded-bottom p-4" id="tarefaTabContent">
+        <!-- ABA 1: Dados Gerais -->
+        <div class="tab-pane fade show active" id="geral">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <p class="mb-2"><strong>{{ object|get_label:'tarefa_n' }}:</strong> {{ object.tarefa_n|default:"-" }}</p>
+                    <p class="mb-2"><strong>{{ object|get_label:'tarefa_a' }}:</strong> {{ object.tarefa_a|default:"-" }}</p>
+                    <p class="mb-2"><strong>{{ object|get_label:'servico' }}:</strong> {{ object.get_servico_display|default:object.servico }}</p>
+                    <p class="mb-2"><strong>{{ object|get_label:'nome_tarefa' }}:</strong>
+                        {% if object.nome_tarefa %}
+                        {% include "design-system/badge.html" with text=object.nome_tarefa.nome variant="info" %}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </p>
+                    <p class="mb-0"><strong>{{ object|get_label:'nome_serv' }}:</strong> {{ object.nome_serv|default:"-" }}</p>
+                </div>
+                <div class="col-md-6 border-start ps-4">
+                    <p class="mb-2"><strong>{{ object|get_label:'responsavel' }}:</strong> {{ object.responsavel|default:"Próprio" }}</p>
+                    <p class="mb-2"><strong>{{ object|get_label:'CPF_R' }}:</strong> {{ object.CPF_R|default:"-" }}</p>
+                    <p class="mb-2"><strong>{{ object|get_label:'assigned_user' }}:</strong> {{ object.assigned_user|default:"-" }}</p>
+                    <p class="mb-0"><strong>{{ object|get_label:'der_tarefa' }}:</strong> {{ object.der_tarefa|default:"-" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 2: Benefício e Débito -->
+        <div class="tab-pane fade" id="beneficio">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <p class="mb-2"><strong>{{ object|get_label:'nb1' }}:</strong> {{ object.nb1|default:"-" }}</p>
+                    <p class="mb-2"><strong>{{ object|get_label:'nb2' }}:</strong> {{ object.nb2|default:"N/A" }}</p>
+                    <p class="mb-2"><strong>{{ object|get_label:'sit_ben' }}:</strong> {{ object.sit_ben|default:"-" }}</p>
+                    <p class="mb-0"><strong>{{ object|get_label:'aps' }}:</strong> {{ object.aps|default:"-" }}</p>
+                </div>
+                <div class="col-md-6 border-start ps-4">
+                    <p class="mb-2 text-danger"><strong>{{ object|get_label:'valor' }}:</strong> R$ {{ object.valor|default:"0,00" }}</p>
+                    <p class="mb-2"><strong>{{ object|get_label:'Competencia' }}:</strong> {{ object.Competencia|default:"-" }}</p>
+                    <p class="mb-2"><strong>{{ object|get_label:'data_irregular' }}:</strong> {{ object.data_irregular|default:"-" }}</p>
+                    <p class="mb-0"><strong>{{ object|get_label:'Periodo_irregular' }}:</strong> {{ object.Periodo_irregular|default:"-" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 3: Tramitação e Defesa -->
+        <div class="tab-pane fade" id="processual">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <p class="mb-2"><strong>{{ object|get_label:'sei_n' }}:</strong> {{ object.sei_n|default:"-" }}</p>
+                    <p class="mb-2"><strong>{{ object|get_label:'procj' }}:</strong> {{ object.procj|default:"Não informado" }}</p>
+                    <p class="mb-2"><strong>{{ object|get_label:'oficio1' }}:</strong> {{ object.oficio1|default:"-" }}</p>
+                    <p class="mb-0"><strong>{{ object|get_label:'oficio2' }}:</strong> {{ object.oficio2|default:"-" }}</p>
+                </div>
+                <div class="col-md-6 border-start ps-4">
+                    <p class="mb-2"><strong>{{ object|get_label:'AR1' }}:</strong> {{ object.AR1|default:"-" }}</p>
+                    <p class="mb-2"><strong>{{ object|get_label:'data_ci' }}:</strong> {{ object.data_ci|default:"-" }}</p>
+                    <p class="mb-2"><strong>{{ object|get_label:'prazo' }}:</strong> {{ object.get_prazo_display|default:object.prazo }}</p>
+                    <p class="mb-0"><strong>{{ object|get_label:'defesa_ap' }}:</strong> {{ object.get_defesa_ap_display|default:object.defesa_ap }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA 4: Análise e Fatos -->
+        <div class="tab-pane fade" id="analise">
+            <!-- Relatório de Defesa -->
+            <div class="ds-card">
+                <div class="ds-card-header">
+                    <i class="bi bi-file-text me-2"></i>{{ object|get_label:'obs1' }}
+                </div>
+                <div class="ds-card-body">
+                    <div class="p-3 bg-light rounded">{{ object.obs1|default:"-" }}</div>
+                </div>
+            </div>
+
+            <!-- Direito e Conclusão -->
+            <div class="ds-card">
+                <div class="ds-card-header">
+                    <i class="bi bi-gavel me-2"></i>{{ object|get_label:'obs2' }}
+                </div>
+                <div class="ds-card-body">
+                    <div class="p-3 bg-light rounded">{{ object.obs2|default:"-" }}</div>
+                </div>
+            </div>
+
+            <!-- Conclusão da Análise -->
+            {% if object.es_conc %}
+            <div class="ds-card">
+                <div class="ds-card-header">
+                    <i class="bi bi-check-circle me-2"></i>{{ object|get_label:'es_conc' }}
+                </div>
+                <div class="ds-card-body">
+                    <div class="p-3 bg-light rounded mb-2"><strong>Conclusão:</strong> {{ object.es_conc.conc|default:"-" }}</div>
+                </div>
+            </div>
+            {% endif %}
+
+            <hr>
+
+            <!-- Envolvimento de Servidor -->
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <p class="mb-2"><strong>{{ object|get_label:'env_serv' }}:</strong> {{ object.env_serv|default:"-" }}</p>
+                    <p class="mb-0"><strong>{{ object|get_label:'servidor' }}:</strong> {{ object.servidor|default:"-" }}</p>
+                </div>
+                <div class="col-12 mt-3">
+                    <h6 class="text-primary fw-bold mb-2"><i class="bi bi-clock-history me-2"></i>{{ object|get_label:'historico' }}</h6>
+                    <div class="p-3 bg-light rounded border-start border-4 border-info shadow-sm">
+                        {{ object.historico|linebreaks|default:"Nenhum histórico registrado." }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rodapé de Ações -->
+    <div class="d-flex justify-content-center gap-2 mt-4">
+        <a href="{% url 'tarefas:tarefa_list_moderna' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Voltar
+        </a>
+        <a href="{% url 'tarefas:integracao_calcular_creditos' object.pk %}" class="btn btn-primary" target="_blank">
+            <i class="bi bi-lightning me-2"></i>Calcular Créditos
+        </a>
+        <a href="{% url 'tarefas:tarefa_update' object.pk %}" class="btn btn-warning">
+            <i class="bi bi-pencil-square me-2"></i>Editar
+        </a>
+        <a href="{% url 'tarefas:tarefa_delete' object.pk %}" class="btn btn-danger">
+            <i class="bi bi-trash me-2"></i>Excluir
+        </a>
+    </div>
+
+    <!-- Info Footer -->
+    <div class="text-center mt-4 text-muted small">
+        <i class="bi bi-clock me-1"></i>Criado em {{ object.atualizado_em|date:"d/m/Y H:i" }}
+        {% if object.assigned_user %}
+        | Responsável: {{ object.assigned_user.username }}
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

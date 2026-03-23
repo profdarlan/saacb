@@ -1,0 +1,25 @@
+{# design-system/stat-card.html #}
+{# Uso: {% include "design-system/stat-card.html" with icon="clock" value="10" label="Pendentes" variant="warning" %} #}
+{# Opções: icon, value, label, variant (primary, success, warning, danger, info) #}
+
+{% load static %}
+
+<div class="ds-stat-card {{ class|default:'' }}">
+    {% if icon %}
+    <i class="ds-stat-icon bi bi-{{ icon }} text-{{ variant|default:'primary' }}"></i>
+    {% endif %}
+
+    {% if value %}
+    <div class="ds-stat-value {{ variant|default:'primary' }}">
+        {{ value|default:0 }}
+    </div>
+    {% endif %}
+
+    {% if label %}
+    <div class="ds-stat-label">
+        {{ label }}
+    </div>
+    {% endif %}
+
+    {% block stat_card_content %}{% endblock %}
+</div>

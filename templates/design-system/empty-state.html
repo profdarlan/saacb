@@ -1,0 +1,30 @@
+{# design-system/empty-state.html #}
+{# Uso: {% include "design-system/empty-state.html" with icon="clipboard-x" title="Sem dados" description="Não há itens para exibir." action_url="#" action_text="Criar Novo" %} #}
+{# Opções: icon, title, description, action_url, action_text #}
+
+{% load static %}
+
+<div class="ds-empty-state {{ class|default:'' }}">
+    {% if icon %}
+    <div class="ds-empty-icon">
+        <i class="bi bi-{{ icon }}"></i>
+    </div>
+    {% endif %}
+
+    {% if title %}
+    <h4 class="mb-2">{{ title }}</h4>
+    {% endif %}
+
+    {% if description %}
+    <p class="text-muted mb-3">{{ description }}</p>
+    {% endif %}
+
+    {% if action_url and action_text %}
+    <a href="{{ action_url }}" class="ds-btn ds-btn-primary">
+        {% if action_icon %}<i class="bi bi-{{ action_icon }} me-2"></i>{% endif %}
+        {{ action_text }}
+    </a>
+    {% endif %}
+
+    {% block empty_state_content %}{% endblock %}
+</div>

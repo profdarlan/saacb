@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gerar Documento - SAACB</title>
+    {% load static %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'tarefas:tarefa_list' %}">SAACB - GERENCIAMENTO DE TAREFAS - PROJETO 13'S</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4 mb-5">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'tarefas:tarefa_list' %}">Tarefas</a></li>
+                <li class="breadcrumb-item active">Gerar Documento</li>
+            </ol>
+        </nav>
+
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-uppercase">{{ tipo_documento }}</h5>
+                <button class="btn btn-light btn-sm" onclick="copyToClipboard()">
+                    <i class="bi bi-clipboard"></i> Copiar para a área de transferência
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info py-2">
+                    <i class="bi bi-info-circle"></i> O texto abaixo foi gerado automaticamente com os dados do processo.
+                </div>
+
+                <!-- Área de texto editável para permitir pequenos ajustes -->
+                <textarea id="documentContent"
+                          class="form-control bg-light"
+                          rows="20"
+                          style="font-family: 'Courier New', Courier, monospace; font-size: 14px; resize: none;">{{ texto_documento }}</textarea>
+
+                <!-- Contador de caracteres -->
+                <div class="mt-2 d-flex justify-content-between align-items-center">
+                    <small id="charCounter" class="text-muted">
+                        0 / 1220 caracteres
+                    </small>
+                    <small id="charWarning" class="text-danger fw-bold d-none">
+                        ⚠ Limite de 1220 caracteres ultrapassado! Faça os ajustes necessários sem for enviar o ofício.
+                    </small>
+                </div>
+            </div>
+
+            <div class="card-footer d-flex justify-content-between">
+                <span class="text-muted small">* Verifique os dados antes de finalizar no SEI ou no PAT, principalmente os marcados com ***.</span>
+                <!-- Usa o ID da tarefa passada pela view (adicione no context da view) -->
+                <a href="{% url 'tarefas:tarefa_detail' object.pk %}" class="btn btn-secondary">Voltar</a>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function copyToClipboard() {
+        const copyText = document.getElementById("documentContent");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(copyText.value).then(() => {
+            alert("Texto copiado com sucesso! Agora você pode colar diretamente no seu documento no SEI ou PAT.");
+        });
+    }
+
+    // Contador de caracteres com alerta de 1450
+    const textarea = document.getElementById('documentContent');
+    const counter  = document.getElementById('charCounter');
+    const warning  = document.getElementById('charWarning');
+    const LIMITE   = 1220;
+
+    function updateCounter() {
+        const len = textarea.value.length;
+        counter.textContent = `${len} / ${LIMITE} caracteres`;
+        if (len > LIMITE) {
+            warning.classList.remove('d-none');
+        } else {
+            warning.classList.add('d-none');
+        }
+    }
+
+    // Atualiza ao carregar e a cada digitação
+    document.addEventListener('DOMContentLoaded', updateCounter);
+    textarea.addEventListener('input', updateCounter);
+    </script>
+</body>
+</html>
+

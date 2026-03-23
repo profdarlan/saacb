@@ -1,0 +1,19 @@
+# ============ CONFIGURAÇÕES DE PRODUÇÃO ============
+
+# Configurações de produção HTTPS - ADICIONADO 2025-03-20
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_HTTPONLY = False
+CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+SECURE_HSTS_SECONDS = 31536000  # 1 ano
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
+SECURE_BROWSER_XSS_FILTER = False
+SECURE_CONTENT_TYPE_NOSNIFF = False
+X_FRAME_OPTIONS = 'DENY'
+
+# Nota: SECURE_SSL_REDIRECT pode causar problemas se o proxy (Nginx)
+# não estiver configurado corretamente. Desative se necessário.

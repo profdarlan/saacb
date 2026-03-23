@@ -1,0 +1,25 @@
+{# design-system/button.html #}
+{# Uso: {% include "design-system/button.html" with text="Salvar" variant="primary" icon="check" href="#" %} #}
+{# Opções: variant (primary, success, danger, outline), icon, href, type, size (sm, md, lg) #}
+
+{% load static %}
+
+{% if href %}
+<a href="{{ href }}"
+   class="ds-btn ds-btn-{{ variant|default:'primary' }} ds-btn-{{ size|default:'md' }}"
+   {% if class %}{{ class }}{% endif %}>
+    {% if icon %}<i class="bi bi-{{ icon }}{% if text %} me-2{% endif %}"></i>{% endif %}
+    {% if text %}{{ text }}{% endif %}
+    {% block button_content %}{% endblock %}
+</a>
+{% else %}
+<button type="{{ type|default:'button' }}"
+        class="ds-btn ds-btn-{{ variant|default:'primary' }} ds-btn-{{ size|default:'md' }}"
+        {% if class %}{{ class }}{% endif %}
+        {% if disabled %}disabled{% endif %}
+        {% block button_attributes %}{% endblock %}>
+    {% if icon %}<i class="bi bi-{{ icon }}{% if text %} me-2{% endif %}"></i>{% endif %}
+    {% if text %}{{ text }}{% endif %}
+    {% block button_content %}{% endblock %}
+</button>
+{% endif %}

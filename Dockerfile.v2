@@ -1,0 +1,42 @@
+# 🐳 Dockerfile SAACB - Versão Simplificada
+
+# Versão corrigida - sem dependência de entrypoint customizado
+
+FROM python:3.11-slim
+
+# 1. Instalar pacotes do sistema (para ReportLab e Pillow)
+RUN apt-get update -qq && apt-get install -y \
+    build-essential \
+    libcairo2-dev \
+    pkg-config \
+    python3-dev \
+    libfreetype6-dev \
+    libpng-dev \
+    libjpeg-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# 2. Copiar requirements primeiro para cache
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# 3. Copiar todo o código
+COPY . .
+
+# 4. Executar migrations e coletar static
+RUN python manage.py collectstatic --noinput --clear || echo "Static collection skipped"
+RUN python manage.py migrate --noinput || echo "Migrations skipped"
+
+# 5. Criar diretório de dados se não existir
+RUN mkdir -p /app/data
+
+# 6. Volume para banco de dados
+VOLUME ["/app/data", "/app/media", "/app/staticfiles"]
+
+# 7. Expor porta
+EXPOSE 8000
+
+# 8. Comando padrão
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "projeto_saacb.wsgi:application"]

@@ -1,0 +1,29 @@
+{# design-system/card.html #}
+{# Uso: {% include "design-system/card.html" with title="Título" icon="icon-name" %} #}
+{# Para conteúdo dinâmico, use block card_content dentro do include #}
+
+{% load static %}
+
+<div class="ds-card {{ class|default:'' }}">
+    {% if not no_header %}
+    <div class="ds-card-header {{ header_class|default:'' }}">
+        {% if icon %}<i class="bi bi-{{ icon }} me-2"></i>{% endif %}
+        {% if title %}{{ title }}{% endif %}
+        {% block card_header %}{% endblock %}
+    </div>
+    {% endif %}
+
+    <div class="ds-card-body {{ body_class|default:'' }}">
+        {% block card_content %}
+        {% if content %}{{ content }}{% endif %}
+        {% endblock %}
+    </div>
+
+    {% if not no_footer %}
+    <div class="ds-card-footer {{ footer_class|default:'' }}">
+        {% block card_footer %}
+        {% if card_footer %}{{ card_footer }}{% endif %}
+        {% endblock %}
+    </div>
+    {% endif %}
+</div>

@@ -1,0 +1,17 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <h1>{{ title }}</h1>
+  <p>Serão atualizadas {{ queryset.count }} tarefas. Selecione o usuário a atribuir e confirme.</p>
+  <form method="post">{% csrf_token %}
+    <input type="hidden" name="apply" value="1" />
+    <input type="hidden" name="action" value="assign_user" />
+    {{ form.as_p }}
+    {% for obj in queryset %}
+      <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}" />
+    {% endfor %}
+    <button type="submit" class="default">Confirmar</button>
+    <a href="..">Cancelar</a>
+  </form>
+{% endblock %}

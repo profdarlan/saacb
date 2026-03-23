@@ -1,0 +1,187 @@
+<!-- 
+📁 tarefas/gru/templates/gru/home.html
+Home do módulo GRU
+-->
+
+{% extends 'base.html' %}
+
+{% block title %}GRU - Home{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 40px auto; padding: 20px;">
+    
+    <!-- Header Hero -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 60px 40px; border-radius: 12px; margin-bottom: 50px; text-align: center;">
+        <h1 style="margin: 0; font-size: 3em; margin-bottom: 15px;">
+            📄 Guia de Recolhimento da União
+        </h1>
+        <p style="margin: 0; font-size: 1.1em; opacity: 0.95;">
+            Consulte, acompanhe e gere PDFs de GRUs do Governo Federal
+        </p>
+    </div>
+    
+    <!-- Cards de Ação -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 50px;">
+        
+        <!-- Card 1: Consultar -->
+        <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.3s ease, box-shadow 0.3s ease;" 
+             onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.15)';"
+             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.1)';">
+            <h2 style="color: #667eea; margin-top: 0;">🔍 Consultar GRU</h2>
+            <p style="color: #666; line-height: 1.6;">
+                Consulte uma GRU existente na API do Governo Federal. 
+                Digite o número e veja todos os dados em tempo real.
+            </p>
+            <a href="{% url 'gru:consultar' %}" 
+               style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 500; transition: background 0.3s ease;"
+               onmouseover="this.style.background='#5568d3';"
+               onmouseout="this.style.background='#667eea';">
+                Consultar Agora →
+            </a>
+        </div>
+        
+        <!-- Card 2: Histórico -->
+        <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.3s ease, box-shadow 0.3s ease;" 
+             onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.15)';"
+             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.1)';">
+            <h2 style="color: #17a2b8; margin-top: 0;">📋 Histórico</h2>
+            <p style="color: #666; line-height: 1.6;">
+                Veja todas as GRUs já consultadas e acompanhe o histórico 
+                de movimentações de cada uma.
+            </p>
+            <a href="{% url 'gru:historico' %}" 
+               style="display: inline-block; background: #17a2b8; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 500; transition: background 0.3s ease;"
+               onmouseover="this.style.background='#138496';"
+               onmouseout="this.style.background='#17a2b8';">
+                Ver Histórico →
+            </a>
+        </div>
+        
+        <!-- Card 3: Estatísticas -->
+        <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.3s ease, box-shadow 0.3s ease;" 
+             onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.15)';"
+             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.1)';">
+            <h2 style="color: #28a745; margin-top: 0;">📊 Estatísticas</h2>
+            <p style="color: #666; line-height: 1.6;">
+                Veja gráficos e resumos sobre suas GRUs: valores, 
+                status de pagamento, tendências.
+            </p>
+            <a href="{% url 'gru:estatisticas' %}" 
+               style="display: inline-block; background: #28a745; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 500; transition: background 0.3s ease;"
+               onmouseover="this.style.background='#218838';"
+               onmouseout="this.style.background='#28a745';">
+                Ver Gráficos →
+            </a>
+        </div>
+    </div>
+    
+    <!-- Informações Rápidas -->
+    <div style="background: #f8f9fa; padding: 40px; border-radius: 12px; margin-bottom: 50px;">
+        <h2 style="color: #333; margin-top: 0;">ℹ️ Informações Rápidas</h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px;">
+            
+            <div>
+                <h3 style="color: #667eea; margin-top: 0;">📌 O que é GRU?</h3>
+                <p style="color: #666;">
+                    <strong>Guia de Recolhimento da União</strong> é um instrumento 
+                    usado para recolher receitas devidas à União, como multas, 
+                    taxas e contribuições.
+                </p>
+            </div>
+            
+            <div>
+                <h3 style="color: #17a2b8; margin-top: 0;">🔗 Integração</h3>
+                <p style="color: #666;">
+                    Este sistema consulta a <strong>API SISGRU</strong> do 
+                    Governo Federal para fornecer dados em tempo real sobre 
+                    suas GRUs.
+                </p>
+            </div>
+            
+            <div>
+                <h3 style="color: #28a745; margin-top: 0;">⏱️ Disponibilidade</h3>
+                <p style="color: #666;">
+                    A API está disponível <strong>segunda a sexta</strong>, 
+                    das <strong>08:00 às 22:00</strong> (horário de Brasília), 
+                    exceto feriados.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Como Usar -->
+    <div style="background: white; padding: 40px; border-radius: 12px; border-left: 4px solid #667eea; margin-bottom: 50px;">
+        <h2 style="color: #333; margin-top: 0;">📖 Como Usar</h2>
+        
+        <ol style="color: #666; line-height: 1.8; padding-left: 20px;">
+            <li>
+                <strong>Acesse "Consultar GRU"</strong> para fazer sua primeira consulta
+            </li>
+            <li>
+                <strong>Forneça suas credenciais</strong> do Conecta.Gov.BR 
+                (usuário e senha)
+            </li>
+            <li>
+                <strong>Digite o número da GRU</strong> (32 dígitos)
+            </li>
+            <li>
+                <strong>Clique em "Consultar"</strong> e aguarde os dados
+            </li>
+            <li>
+                <strong>Baixe o PDF</strong> se desejar uma cópia visual
+            </li>
+            <li>
+                <strong>Acompanhe no histórico</strong> todas suas consultas anteriores
+            </li>
+        </ol>
+    </div>
+    
+    <!-- FAQ -->
+    <div style="background: white; padding: 40px; border-radius: 12px; margin-bottom: 50px;">
+        <h2 style="color: #333; margin-top: 0;">❓ Perguntas Frequentes</h2>
+        
+        <div style="border-bottom: 1px solid #eee; padding: 20px 0;">
+            <h4 style="color: #667eea; margin-top: 0;">Preciso ter credenciais do Conecta.Gov.BR?</h4>
+            <p style="color: #666; margin: 0;">
+                Sim, você precisará ter um usuário e senha registrados no 
+                <a href="https://www.gov.br/conecta/" target="_blank" style="color: #667eea;">Conecta.Gov.BR</a> 
+                para acessar a API.
+            </p>
+        </div>
+        
+        <div style="border-bottom: 1px solid #eee; padding: 20px 0;">
+            <h4 style="color: #667eea; margin-top: 0;">Como obtenho meu número de GRU?</h4>
+            <p style="color: #666; margin: 0;">
+                O número da GRU é fornecido pelo órgão responsável pela arrecadação 
+                ou aparece em documentos oficiais relacionados à receita.
+            </p>
+        </div>
+        
+        <div style="border-bottom: 1px solid #eee; padding: 20px 0;">
+            <h4 style="color: #667eea; margin-top: 0;">Os PDFs gerados são válidos?</h4>
+            <p style="color: #666; margin: 0;">
+                Sim! Os PDFs são gerados com base nos dados da API SISGRU 
+                oficial do Governo Federal.
+            </p>
+        </div>
+        
+        <div style="padding: 20px 0;">
+            <h4 style="color: #667eea; margin-top: 0;">Meus dados ficam salvos?</h4>
+            <p style="color: #666; margin: 0;">
+                Se você ativar o módulo de histórico, as consultas são salvas 
+                no banco de dados. Caso contrário, são consultadas apenas em sessão.
+            </p>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <div style="background: #f8f9fa; padding: 30px; border-radius: 12px; text-align: center;">
+        <p style="color: #666; margin: 0;">
+            <strong>Precisa de ajuda?</strong><br>
+            Consulte a <a href="#" style="color: #667eea;">documentação completa</a> 
+            ou entre em contato com o suporte.
+        </p>
+    </div>
+</div>
+{% endblock %}

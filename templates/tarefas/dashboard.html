@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard SAMC - Produtividade{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+<script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+<script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #1e293b; }
+  ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+  .card { background: #1e293b; border-radius: 12px; border: 1px solid #334155; }
+  .card-hover { transition: all 0.2s ease; }
+  .card-hover:hover { border-color: #3b82f6; box-shadow: 0 0 20px rgba(59,130,246,0.1); }
+  .badge { padding: 2px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .badge-pendente { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .badge-intermediaria { background: rgba(59,130,246,0.15); color: #3b82f6; }
+  .badge-finalizada { background: rgba(16,185,129,0.15); color: #10b981; }
+  .drop-zone { border: 2px dashed #475569; border-radius: 12px; transition: all 0.2s ease; }
+  .drop-zone.active { border-color: #3b82f6; background: rgba(59,130,246,0.05); }
+  .filter-select { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 13px; outline: none; transition: border-color 0.2s; }
+  .filter-select:focus { border-color: #3b82f6; }
+  .filter-select option { background: #1e293b; }
+  .search-input { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 13px; outline: none; width: 100%; transition: border-color 0.2s; }
+  .search-input:focus { border-color: #3b82f6; }
+  .search-input::placeholder { color: #64748b; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  th { background: #0f172a; position: sticky; top: 0; z-index: 2; padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; cursor: pointer; user-select: none; border-bottom: 1px solid #334155; }
+  th:hover { color: #e2e8f0; }
+  td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid rgba(51,65,85,0.5); }
+  tr:hover td { background: rgba(59,130,246,0.03); }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; }
+  .modal-content { background: #1e293b; border: 1px solid #334155; border-radius: 16px; max-width: 800px; width: 95%; max-height: 85vh; overflow-y: auto; }
+  .kpi-value { font-variant-numeric: tabular-nums lining-nums; }
+  .recharts-cartesian-axis-tick-value { fill: #94a3b8 !important; font-size: 11px !important; }
+  .recharts-legend-item-text { color: #94a3b8 !important; font-size: 12px !important; }
+  .animate-fade-in { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .checkbox-custom { appearance: none; width: 16px; height: 16px; border: 1px solid #475569; border-radius: 4px; background: #0f172a; cursor: pointer; position: relative; flex-shrink: 0; }
+  .checkbox-custom:checked { background: #3b82f6; border-color: #3b82f6; }
+  .checkbox-custom:checked::after { content: '✓'; position: absolute; top: -1px; left: 2px; font-size: 12px; color: white; font-weight: 700; }
+  .pulse { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+</style>
+
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          navy: { 900: '#0f172a', 800: '#1e293b', 700: '#334155' }
+        }
+      }
+    }
+  }
+</script>
+{% endblock %}
+
+{% block content %}
+<div id="root"></div>
+
+<script type="text/babel">
+{% verbatim %}
+const { useState, useEffect, useMemo, useCallback, useRef } = React;
+const {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line
+} = Recharts;
+
+// ─── Embedded CSV Data ───
+const DEFAULT_CSV = `id,nome_interessado,CPF,tarefa_n,tarefa_a,sei_n,procj,servico,nome_serv_id,der_tarefa,nb1,nb2,sit_ben,aps,prazo,defesa_ap,categoria,tip_con,oficio1,oficio2,Competencia,data_irregular,Periodo_irregular,valor,obs1,obs2,responsavel,CPF_R,Conclusao,status,historico,servidor,nome_tarefa_id,assigned_user_id,AR1,AR2,env_serv,resp_credito,es_conc_id,data_def,data_rec,atualizado_em,concluida_em`;
+
+function DashboardApp() {
+  const [data, setData] = useState([]);
+  const [filter, setFilter] = useState('TODOS');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    // Simular carregamento de dados
+    console.log('Dashboard carregado');
+  }, []);
+
+  return (
+    <div style={{ padding: '20px', color: '#e2e8f0' }}>
+      <h1 style={{ marginBottom: '20px' }}>Dashboard SAMC - Produtividade</h1>
+      <p>Dashboard carregado com sucesso!</p>
+    </div>
+  );
+}
+
+ReactDOM.render(<DashboardApp />, document.getElementById('root'));
+{% endverbatim %}
+</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+name: saacbdjango
+services:
+  saacb-django:
+    build:
+      context: /DATA/AppData/saacbdjango
+      dockerfile: Dockerfile
+    container_name: saacb-django
+    environment:
+      - PYTHONUNBUFFERED=1
+    ports:
+      - mode: ingress
+        target: 8000
+        published: "8000"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /DATA/AppData/saacbdjango/data
+        target: /app/data
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /DATA/AppData/saacbdjango/staticfiles
+        target: /app/staticfiles
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /DATA/AppData/saacbdjango/.env
+        target: /app/.env
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /DATA/AppData/saacbdjango
+        target: /app
+        bind:
+          create_host_path: true
+    devices: []
+    cap_add: []
+    command: []
+    image: null
+    networks:
+      - default
+    privileged: false
+    hostname: saacb-django
+    cpu_shares: 90
+    deploy:
+      resources:
+        limits:
+          memory: 24576M
+networks:
+  default:
+    name: saacbdjango_default
+x-casaos:
+  hostname: ""
+  scheme: http
+  index: /
+  port_map: ""
+  author: self
+  category: self
+  icon: ""
+  title:
+    custom: ""

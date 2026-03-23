@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Minhas Tarefas - SAACB{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1"><i class="bi bi-list-check me-2"></i>Minhas Tarefas</h1>
+            <p class="text-muted mb-0">Gerencie suas tarefas atribuídas</p>
+        </div>
+        <a href="{% url 'tarefas:tarefa_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Nova Tarefa
+        </a>
+    </div>
+
+    <!-- Cards de Estatísticas (Design System) -->
+    <div class="row mb-4">
+        <div class="col-12 col-sm-6 col-lg-3 mb-3">
+            {% include "design-system/stat-card.html" with icon="clock-history" value=pendentes label="Pendentes" variant="warning" %}
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3 mb-3">
+            {% include "design-system/stat-card.html" with icon="check-circle" value=concluidas label="Concluídas" variant="success" %}
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3 mb-3">
+            {% include "design-system/stat-card.html" with icon="calendar-week" value=concluidas_semana label="Esta Semana" variant="info" %}
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3 mb-3">
+            {% include "design-system/stat-card.html" with icon="exclamation-triangle" value=faltam label="Faltam" variant="danger" %}
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="row mb-4">
+        <div class="col-12 col-lg-6">
+            <div class="ds-card">
+                <div class="ds-card-header"><i class="bi bi-pie-chart me-2"></i>Status Geral</div>
+                <div class="ds-card-body"><canvas id="statusChart" height="200"></canvas></div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="ds-card">
+                <div class="ds-card-header"><i class="bi bi-bar-chart me-2"></i>Progresso Semanal</div>
+                <div class="ds-card-body"><canvas id="weeklyChart" height="200"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Ferramentas (Design System) -->
+    <div class="ds-search-toolbar mb-4">
+        <div class="row align-items-center g-3">
+            <div class="col-12 col-lg-5">
+                <form method="get" class="d-flex">
+                    <span class="input-group-text bg-light border-end-0">
+                        <i class="bi bi-search text-muted"></i>
+                    </span>
+                    <input type="search" name="q" class="form-control border-start-0 ps-0"
+                           placeholder="Buscar por Nome, CPF ou Tarefa..." value="{{ request.GET.q|default:'' }}">
+                    <button type="submit" class="btn btn-primary px-3">
+                        <i class="bi bi-search"></i>
+                    </button>
+                    {% if request.GET.q %}
+                    <a href="{% url 'tarefas:tarefa_list' %}"
+                       class="btn btn-outline-secondary px-2" title="Limpar busca">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+            <div class="col-12 col-lg-7">
+                <div class="d-flex justify-content-lg-end gap-2 flex-wrap">
+                    <!-- Dropdown Relatórios -->
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-outline-secondary dropdown-toggle shadow-sm"
+                                data-bs-toggle="dropdown">
+                            <i class="bi bi-printer-fill me-1"></i> Relatórios
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                            <li><h6 class="dropdown-header">Opções de Exportação</h6></li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'tarefas:relatorio_usuario' %}" target="_blank">
+                                    <i class="bi bi-people me-2"></i>Por Usuário (PDF)
+                                </a>
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item"
+                                        data-bs-toggle="modal" data-bs-target="#modalRelatorioConcluidas">
+                                    <i class="bi bi-calendar-check me-2"></i>Concluídas por Período
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    <a href="{% url 'tarefas:export_csv' %}" class="btn btn-outline-secondary shadow-sm" title="Exportar CSV">
+                        <i class="bi bi-download me-1"></i> Exportar CSV
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary shadow-sm"
+                            data-bs-toggle="modal" data-bs-target="#modalImportCSV">
+                        <i class="bi bi-upload me-1"></i> Importar CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Tarefas em Cards -->
+    {% if tarefas %}
+    <div class="row">
+        {% for tarefa in tarefas %}
+        <div class="col-12 col-md-6 col-xl-4 mb-3">
+            <div class="ds-card">
+                <div class="ds-card-header">
+                    <i class="bi bi-person me-2"></i>{{ tarefa.nome_interessado|default:"Sem Nome" }}
+                </div>
+                <div class="ds-card-body">
+                    <p class="mb-2">
+                        <strong>Serviço:</strong> {{ tarefa.get_servico_display|default:tarefa.servico|truncatechars:50 }}
+                    </p>
+                    <div class="mb-2">
+                        <strong>Status:</strong>
+                        {% if tarefa.status == 'CONCLUIDA_FINALIZADA' %}
+                        {% include "design-system/badge.html" with text="Finalizada" variant="success" icon="check-circle" %}
+                        {% elif tarefa.status == 'CONCLUIDA_INTERMEDIARIA' %}
+                        {% include "design-system/badge.html" with text="Intermediária" variant="info" icon="arrow-clockwise" %}
+                        {% elif tarefa.status == 'PENDENTE - CORREÇÃO' %}
+                        {% include "design-system/badge.html" with text="Correção" variant="danger" icon="exclamation-triangle" %}
+                        {% else %}
+                        {% include "design-system/badge.html" with text="Pendente" variant="warning" icon="clock" %}
+                        {% endif %}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Fase:</strong>
+                        {% if tarefa.nome_tarefa %}
+                        {% include "design-system/badge.html" with text=tarefa.nome_tarefa.nome variant="info" %}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </div>
+                    <p class="mb-2">
+                        <strong>Conclusão:</strong> {{ tarefa.get_Conclusao_display|default:"Em análise" }}
+                    </p>
+                    <p class="mb-0">
+                        <small class="text-muted"><i class="bi bi-hash me-1"></i>ID: {{ tarefa.pk }}</small>
+                    </p>
+                    <div class="btn-group w-100 mt-3" role="group">
+                        <a href="{% url 'tarefas:tarefa_detail' tarefa.pk %}"
+                           class="btn btn-outline-info btn-sm" title="Ver detalhes">
+                            <i class="bi bi-eye me-1"></i>Ver
+                        </a>
+                        <a href="{% url 'tarefas:tarefa_update' tarefa.pk %}"
+                           class="btn btn-outline-warning btn-sm" title="Editar tarefa">
+                            <i class="bi bi-pencil me-1"></i>Editar
+                        </a>
+                        <a href="{% url 'tarefas:tarefa_delete' tarefa.pk %}"
+                           class="btn btn-outline-danger btn-sm" title="Excluir tarefa"
+                           onclick="return confirm('Tem certeza que deseja excluir esta tarefa?');">
+                            <i class="bi bi-trash me-1"></i>Excluir
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    {% include "design-system/empty-state.html" with title="Nenhuma tarefa encontrada" icon="clipboard-x" %}
+    {% endif %}
+
+    <!-- Modal: Relatório por Período -->
+    <div class="modal fade" id="modalRelatorioConcluidas" tabindex="-1" aria-labelledby="modalRelatorioLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalRelatorioLabel">
+                        <i class="bi bi-calendar-range me-2"></i>Selecione o Período
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formRelatorioDatas">
+                        <div class="mb-3">
+                            <label for="rel_inicio" class="form-label">
+                                <i class="bi bi-calendar-event me-1"></i>Data Início
+                            </label>
+                            <input type="date" id="rel_inicio" class="form-control" required aria-required="true">
+                        </div>
+                        <div class="mb-3">
+                            <label for="rel_fim" class="form-label">
+                                <i class="bi bi-calendar-check me-1"></i>Data Fim
+                            </label>
+                            <input type="date" id="rel_fim" class="form-control" required aria-required="true">
+                        </div>
+                        <div id="erro-datas" class="alert alert-danger d-none" role="alert">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            <span id="erro-datas-msg"></span>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="gerarRelatorio()">
+                        <i class="bi bi-file-pdf me-1"></i>Gerar PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom' } }
+};
+
+const statusCtx = document.getElementById('statusChart');
+if (statusCtx) {
+    new Chart(statusCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Pendentes', 'Concluídas'],
+            datasets: [{
+                data: [{{ pendentes|default:0 }}, {{ concluidas|default:0 }}],
+                backgroundColor: ['#ffc107', '#28a745'],
+                borderColor: ['#ffffff', '#ffffff'],
+                borderWidth: 2
+            }]
+        },
+        options: chartOptions
+    });
+}
+
+const weeklyCtx = document.getElementById('weeklyChart');
+if (weeklyCtx) {
+    new Chart(weeklyCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Concluídas na Semana', 'Faltam Concluir'],
+            datasets: [{
+                label: 'Quantidade',
+                data: [{{ concluidas_semana|default:0 }}, {{ faltam|default:0 }}],
+                backgroundColor: ['#17a2b8', '#dc3545'],
+                borderColor: ['#138496', '#bd2130'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...chartOptions,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+}
+
+function gerarRelatorio() {
+    const inicio = document.getElementById('rel_inicio').value;
+    const fim = document.getElementById('rel_fim').value;
+    const erroDiv = document.getElementById('erro-datas');
+    const erroMsg = document.getElementById('erro-datas-msg');
+
+    erroDiv.classList.add('d-none');
+
+    if (!inicio || !fim) {
+        erroMsg.textContent = 'Por favor, preencha ambas as datas.';
+        erroDiv.classList.remove('d-none');
+        return;
+    }
+
+    if (new Date(inicio) > new Date(fim)) {
+        erroMsg.textContent = 'A data de início deve ser anterior à data de fim.';
+        erroDiv.classList.remove('d-none');
+        return;
+    }
+
+    const url = "{% url 'tarefas:relatorio_concluidas' %}?inicio=" + inicio + "&fim=" + fim;
+    window.open(url, '_blank');
+
+    const modalEl = document.getElementById('modalRelatorioConcluidas');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const hoje = new Date().toISOString().split('T')[0];
+    document.getElementById('rel_inicio').setAttribute('max', hoje);
+    document.getElementById('rel_fim').setAttribute('max', hoje);
+});
+</script>
+{% endblock %}
