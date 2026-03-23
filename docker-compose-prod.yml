@@ -1,0 +1,59 @@
+version: '3.8'
+
+name: saacb-prod
+
+services:
+  saacb-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: saacb-django-prod
+    command: gunicorn projeto_saacb.wsgi:application --bind 0.0.0.0:8000 --workers 3 --worker-class sync --timeout 120 --keep-alive 5 --log-level info
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=django-insecure-saacb-prod-change-me
+      - ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.51
+      - DATABASE_URL=sqlite:////app/data/db.sqlite3
+      - SISGRU_USUARIO=
+      - SISGRU_SENHA=
+      - SISGRU_PRODUCAO=True
+      - CALCULADORA_API_URL=http://planilha-calculos:8000
+      - CALCULADORA_API_TOKEN=
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=llama3:8b
+      - SECURE_SSL_REDIRECT=False
+    volumes:
+      - ./data:/app/data
+      - ./media:/app/media
+      - ./static:/app/static
+    depends_on:
+      - planilha-calculos
+    restart: unless-stopped
+    networks:
+      - saacb-prod-network
+
+  planilha-calculos:
+    build:
+      context: ../planilha_saacb
+      dockerfile: Dockerfile
+    container_name: planilha-calculos-prod
+    ports:
+      - "8002:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      - ../planilha_saacb:/app
+      - planilha-prod-data:/app/data
+    restart: unless-stopped
+    networks:
+      - saacb-prod-network
+
+volumes:
+  planilha-prod-data:
+
+networks:
+  saacb-prod-network:
+    driver: bridge
