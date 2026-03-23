@@ -61,8 +61,15 @@ SECURE_SSL_REDIRECT=False  # Mudar para True após configurar HTTPS
 
 - [ ] Verificar `Dockerfile` (✅ OK)
 - [ ] Verificar `docker-compose.yml` (✅ OK)
+- [ ] Arquivos docker-compose NÃO possuem o campo `version` (compatível com `docker compose`)
 - [ ] Mapear volumes de forma persistente
 - [ ] Configurar política de restart (`unless-stopped`)
+
+**Comandos:**
+- Antigo (v1): `docker-compose up -d`
+- Novo (v2): `docker compose up -d` (recomendado)
+
+**Nota:** Os arquivos `docker-compose.yml`, `docker-compose-dev.yml` e `docker-compose-prod.yml` não possuem o campo `version` para compatibilidade com o novo comando `docker compose`.
 
 ### 6. Servidor
 
