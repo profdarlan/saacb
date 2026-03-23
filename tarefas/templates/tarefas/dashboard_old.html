@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard SAMC{% endblock %}
+
+{% block content %}
+<div id="root" 
+     data-user="{{ user.username|default:'Usuário' }}" 
+     data-api-url="{% url 'tarefas:dashboard-data' %}">
+</div>
+{% endblock %}
+
+{% block extracss %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Todo CSS inline aqui - copie do file:17 */
+</style>
+{% endblock %}
+
+{% block extrajs %}
+<!-- Teste SEM Tailwind/Babel primeiro -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script>
+const { useState, useEffect } = React;
+const rootEl = document.getElementById('root');
+const API_URL = rootEl.dataset.apiUrl;
+
+function TestComponent() {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    fetch(API_URL)
+      .then(r => r.json())
+      .then(setData);
+  }, []);
+  return <pre>{JSON.stringify(data, null, 2)}</pre>;
+}
+
+ReactDOM.createRoot(rootEl).render(<TestComponent />);
+</script>
+{% endblock %}

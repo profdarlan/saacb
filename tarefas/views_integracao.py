@@ -109,7 +109,7 @@ def calcular_creditos_tarefa(request, tarefa_id):
 @csrf_exempt
 def calcular_ajax(request):
     """
-    Endpoint AJAX para cálculo rápido sem recarregar página
+    Endpoint AJAX para salvar resultados de cálculo direto na tarefa
     """
     tarefa_id = request.POST.get('tarefa_id')
     if not tarefa_id:
@@ -118,49 +118,112 @@ def calcular_ajax(request):
     tarefa = get_object_or_404(tarefassamc, id=tarefa_id)
 
     try:
-        # Converter tarefa para dados de cálculo
-        beneficiario, creditos = tarefa_para_calculo(tarefa)
+        # Tentar usar a API de cálculos se estiver disponível
+        try:
+            # Converter tarefa para dados de cálculo
+            beneficiario, creditos = tarefa_para_calculo(tarefa)
 
-        # Obter índices
-        indices_dict = calculadora_client.obter_indices_padrao()
-        indices = [
-            IndiceData(competencia=comp, indice=ind)
-            for comp, ind in indices_dict.items()
-        ]
+            # Obter índices
+            indices_dict = calculadora_client.obter_indices_padrao()
+            indices = [
+                IndiceData(competencia=comp, indice=ind)
+                for comp, ind in indices_dict.items()
+            ]
 
-        # Realizar cálculo
-        resultado = calculadora_client.calcular(
-            beneficiario=beneficiario,
-            creditos=creditos,
-            indices=indices
-        )
+            # Realizar cálculo
+            resultado = calculadora_client.calcular(
+                beneficiario=beneficiario,
+                creditos=creditos,
+                indices=indices
+            )
 
-        # Atualizar tarefa
-        tarefa.valor_original_calculado = resultado.total_original
-        tarefa.valor_corrigido_calculado = resultado.total_corrigido
-        tarefa.valor_diferenca = resultado.diferenca
+            # Atualizar tarefa
+            tarefa.valor_original_calculado = resultado.total_original
+            tarefa.valor_corrigido_calculado = resultado.total_corrigido
+            tarefa.valor_diferenca = resultado.diferenca
+            tarefa.detalhes_calculo = {
+                'id': resultado.id,
+                'timestamp': resultado.timestamp,
+                'resultados': resultado.resultados,
+            }
+            tarefa.calculado_em = timezone.now()
+            tarefa.save()
+
+            return JsonResponse({
+                'status': 'success',
+                'resultado': {
+                    'id': resultado.id,
+                    'timestamp': resultado.timestamp,
+                    'total_original': resultado.total_original,
+                    'total_corrigido': resultado.total_corrigido,
+                    'diferenca': resultado.diferenca,
+                    'quantidade': resultado.quantidade_creditos,
+                    'resultados': resultado.resultados,
+                }
+            })
+        except Exception as api_error:
+            # Se a API falhar, verificar se já há valores calculados na tarefa
+            if (tarefa.valor_original_calculado is not None and
+                tarefa.valor_corrigido_calculado is not None and
+                tarefa.valor_diferenca is not None):
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Usando valores previamente calculados',
+                    'resultado': {
+                        'total_original': float(tarefa.valor_original_calculado),
+                        'total_corrigido': float(tarefa.valor_corrigido_calculado),
+                        'diferenca': float(tarefa.valor_diferenca),
+                        'resultados': tarefa.detalhes_calculo.get('resultados', []) if tarefa.detalhes_calculo else [],
+                    }
+                })
+            else:
+                raise Exception(f"API indisponível e não há valores calculados: {str(api_error)}")
+
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def salvar_resultados_calculo(request, tarefa_id):
+    """
+    Salva os resultados de cálculo gerados pelo frontend na tarefa
+    """
+    tarefa = get_object_or_404(tarefassamc, id=tarefa_id)
+
+    try:
+        import json
+        data = json.loads(request.body.decode('utf-8'))
+
+        # Extrair valores do payload
+        total_original = data.get('total_original', 0)
+        total_corrigido = data.get('total_corrigido', 0)
+        diferenca = data.get('diferenca', 0)
+        resultados = data.get('resultados', [])
+
+        # Atualizar tarefa com os resultados
+        tarefa.valor_original_calculado = total_original
+        tarefa.valor_corrigido_calculado = total_corrigido
+        tarefa.valor_diferenca = diferenca
         tarefa.detalhes_calculo = {
-            'id': resultado.id,
-            'timestamp': resultado.timestamp,
-            'resultados': resultado.resultados,
+            'resultados': resultados,
+            'timestamp': timezone.now().isoformat(),
         }
         tarefa.calculado_em = timezone.now()
         tarefa.save()
 
         return JsonResponse({
             'status': 'success',
-            'resultado': {
-                'id': resultado.id,
-                'timestamp': resultado.timestamp,
-                'total_original': resultado.total_original,
-                'total_corrigido': resultado.total_corrigido,
-                'diferenca': resultado.diferenca,
-                'quantidade': resultado.quantidade_creditos,
-                'resultados': resultado.resultados,
-            }
+            'message': 'Resultados salvos com sucesso',
+            'total_original': total_original,
+            'total_corrigido': total_corrigido,
+            'diferenca': diferenca,
         })
 
-    except APIException as e:
+    except Exception as e:
         return JsonResponse({
             'status': 'error',
             'message': str(e)
@@ -263,6 +326,68 @@ def status_api(request):
         'api_online': calculadora_client.ping(),
         'indices_configurados': len(calculadora_client.obter_indices_padrao()),
     })
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def aprovar_calculos_tarefa(request, tarefa_id):
+    """
+    Aprova os cálculos da tarefa e migra o valor corrigido para o campo Valor.
+    Atualiza os campos calculados e marca calculos_aprovados=True.
+    O signal pre_save cuida da migração para o campo valor principal.
+    """
+    tarefa = get_object_or_404(tarefassamc, id=tarefa_id)
+
+    try:
+        import json
+        data = json.loads(request.body.decode('utf-8'))
+        
+        # Verificar se deve usar o valor corrigido ou original
+        usar_corrigido = data.get('usar_corrigido', True)
+
+        # Verificar se há valores calculados
+        if tarefa.valor_corrigido_calculado is None:
+            return JsonResponse({
+                'success': False,
+                'error': 'Não há valores calculados para aprovar. Realize o cálculo primeiro.'
+            }, status=400)
+
+        # Marcar como aprovado (o signal pre_save fará a migração)
+        tarefa.calculos_aprovados = True
+
+        # Atualizar status para indicar migração
+        if tarefa.status == 'PENDENTE':
+            tarefa.status = 'PENDENTE - MIGRADO'
+        elif tarefa.status in ['CONCLUIDA_INTERMEDIARIA', 'CONCLUIDA_FINALIZADA']:
+            # Se já está concluída, mantém o status mas marca que foi migrado
+            pass
+
+        # O signal pre_save migrará os valores automaticamente
+        tarefa.save()
+
+        # Retornar o valor que foi migrado
+        valor_migrado = str(tarefa.valor_corrigido_calculado if usar_corrigido else tarefa.valor_original_calculado)
+
+        return JsonResponse({
+            'success': True,
+            'valor_original': str(tarefa.valor_original_calculado),
+            'valor_corrigido': str(tarefa.valor_corrigido_calculado),
+            'valor_diferenca': str(tarefa.valor_diferenca),
+            'valor_migrado': valor_migrado,
+            'status': tarefa.status,
+            'mensagem': 'Cálculos aprovados e migrados com sucesso!'
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'JSON inválido na requisição'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 
 @require_http_methods(["POST"])

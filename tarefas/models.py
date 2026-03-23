@@ -223,26 +223,22 @@ class GRU(models.Model):
 @receiver(pre_save, sender=tarefassamc)
 def migrar_valores_aprovados(sender, instance, **kwargs):
     """
-    Quando os cálculos são aprovados (checkbox marcado), 
+    Quando os cálculos são aprovados (checkbox marcado),
     migre os valores calculados para o campo valor principal
     e atualiza o status para indicar que foi migrado.
     """
     # Só migrar se o cálculo foi aprovado
     if not instance.calculos_aprovados:
         return
-    
-    # Só migrar se houver valores calculados
-    if (instance.valor_original_calculado is None or 
-        instance.valor_corrigido_calculado is None or 
-        instance.valor_diferenca is None):
+
+    # Só migrar se houver valor corrigido calculado
+    if instance.valor_corrigido_calculado is None:
         return
-    
-    # Migrar valores calculados para o campo valor principal
-    if instance.valor_original_calculado:
-        instance.valor = instance.valor_original_calculado
-    if instance.valor_corrigido_calculado:
-        instance.valor = instance.valor_corrigido_calculado
-    
+
+    # Migrar valor corrigido para o campo valor principal (formatado como string)
+    # O campo valor é um CharField, então precisamos formatar como moeda brasileira
+    instance.valor = str(instance.valor_corrigido_calculado).replace('.', ',')
+
     # Atualizar status para indicar que foi migrado
     # Se o status for PENDENTE, muda para PENDENTE - MIGRADO
     # Isso mostra que os cálculos foram aprovados mas ainda não finalizados

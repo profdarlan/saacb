@@ -5,6 +5,7 @@ from django.views.generic import (
     DeleteView, TemplateView
 )
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
@@ -503,14 +504,20 @@ class ImportCSVView(View):
 class DashboardView(TemplateView):
     template_name = 'tarefas/dashboard.html'
 
-
 @method_decorator(login_required, name='dispatch')
-class DashboardDataView(View):
+class DashboardDataView(LoginRequiredMixin, View):
     def get(self, request):
-        tarefas = tarefassamc.objects.filter(assigned_user=request.user).values(
-            'id', 'tarefa_n', 'nome_interessado', 'servico',
-            'status', 'atualizado_em', 'concluida_em'
-        )
+        if request.user.is_superuser:
+            tarefas = tarefassamc.objects.all().values(
+                'id', 'tarefa_n', 'nome_interessado', 'servico',
+                'status', 'atualizado_em', 'concluida_em'
+            )[:1000]
+        else:
+            tarefas = tarefassamc.objects.filter(
+                assigned_user=request.user
+            ).values(
+                'id', 'tarefa_n', 'nome_interessado', 'servico',
+                'status', 'atualizado_em', 'concluida_em'
+            )
         return JsonResponse({'tarefas': list(tarefas)})
-
 

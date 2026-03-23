@@ -23,11 +23,13 @@ urlpatterns = [
     
     # URLs de Integração com Planilha Cálculos
     path('tarefa/<int:tarefa_id>/calcular/', integracao.calcular_creditos_tarefa, name='integracao_calcular_creditos'),
+    path('tarefa/<int:tarefa_id>/salvar-resultados/', integracao.salvar_resultados_calculo, name='integracao_salvar_resultados'),
+    path('tarefa/<int:tarefa_id>/aprovar-calculos/', integracao.aprovar_calculos_tarefa, name='integracao_aprovar_calculos'),
     path('api/calcular/', integracao.calcular_ajax, name='integracao_api_calcular'),
     path('tarefa/<int:tarefa_id>/pdf/', integracao.baixar_relatorio_pdf, name='integracao_baixar_pdf'),
     path('tarefa/<int:tarefa_id>/excel/', integracao.baixar_relatorio_excel, name='integracao_baixar_excel'),
     path('api/status/', integracao.status_api, name='integracao_status_api'),
     path('tarefa/<int:tarefa_id>/aprovar-valor/', integracao.aprovar_valor, name='integracao_aprovar_valor'),
-    path('dashboard/data/', DashboardDataView.as_view(), name='dashboard_data'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('dashboard-data/', DashboardDataView.as_view(), name='dashboard-data'),
 ]   

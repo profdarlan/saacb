@@ -8,6 +8,9 @@ urlpatterns = [
     # Cálculo de créditos
     path('tarefa/<int:tarefa_id>/calcular/', integracao.calcular_creditos_tarefa, name='integracao_calcular_creditos'),
     
+    # Aprovar e migrar cálculos
+    path('tarefa/<int:tarefa_id>/aprovar-calculos/', integracao.aprovar_calculos_tarefa, name='integracao_aprovar_calculos'),
+    
     # API AJAX
     path('api/calcular/', integracao.calcular_ajax, name='integracao_api_calcular'),
     
