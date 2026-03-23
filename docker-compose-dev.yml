@@ -1,7 +1,5 @@
 version: '3.8'
 
-name: saacb-dev
-
 services:
   saacb-dev:
     build:
