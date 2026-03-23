@@ -4,11 +4,19 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-temporary-key'
+SECRET_KEY = '7_d()+#g-wyfd=oeq*=!z7(wi(y!2io0r-@01-979r2zcc6xn5'
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.51']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.51', 'saacb.lakeserver.online']
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://saacb.lakeserver.online',
+    'http://saacb.lakeserver.online',
+    'http://localhost',
+    'http://127.0.0.1',
+    'http://192.168.1.51',
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
