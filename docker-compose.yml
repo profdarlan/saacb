@@ -1,14 +1,12 @@
-version: '3.8'
-
 services:
   saacb:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: saacb-django-teste
+    container_name: saacb-django
     command: gunicorn projeto_saacb.wsgi:application --bind 0.0.0.0:8000 --workers 3 --worker-class sync --timeout 120 --keep-alive 5 --log-level info
     ports:
-      - "${PORT:-30010}:8000"
+      - "${PORT:-8000}:8000"
     environment:
       - DEBUG=${DEBUG:-True}
       - SECRET_KEY=${SECRET_KEY:-django-insecure-saacb-dev}
