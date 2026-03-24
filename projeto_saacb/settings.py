@@ -4,7 +4,9 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = '7_d()+#g-wyfd=oeq*=!z7(wi(y!2io0r-@01-979r2zcc6xn5'
+# SECRET_KEY para ambiente de desenvolvimento
+# Em produção, use variável de ambiente: os.environ.get('DJANGO_SECRET_KEY')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '7_d()+#g-wyfd=oeq*=!z7(wi(y!2io0r-@01-979r2zcc6xn5')
 
 DEBUG = True
 
