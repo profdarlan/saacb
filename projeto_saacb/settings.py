@@ -8,9 +8,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Em produção, use variável de ambiente: os.environ.get('DJANGO_SECRET_KEY')
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '7_d()+#g-wyfd=oeq*=!z7(wi(y!2io0r-@01-979r2zcc6xn5')
 
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.51', 'saacb.lakeserver.online']
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.1.51", "saacb.lakeserver.online"]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://saacb.lakeserver.online',
@@ -94,7 +94,7 @@ LOGIN_URL = '/admin/login/'
 LOGIN_REDIRECT_URL = '/admin/'
 LOGOUT_REDIRECT_URL = '/admin/'
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 SERVER_EMAIL = 'root@localhost'
 
