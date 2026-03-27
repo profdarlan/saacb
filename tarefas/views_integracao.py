@@ -576,3 +576,131 @@ def aprovar_valor(request, tarefa_id):
             'success': False,
             'error': str(e)
         }, status=500)
+
+
+# ============================================================
+# PROXIES /api/* — usados em PRODUÇÃO (API_BASE = '/api')
+# Em desenvolvimento o browser acessa a FastAPI diretamente.
+# Em produção, essas views fazem as chamadas server-to-server.
+# ============================================================
+
+import requests as _requests
+
+
+@require_http_methods(["GET"])
+def api_proxy_status(request):
+    """
+    GET /api/status — verifica disponibilidade da API calculadora.
+    Substitui a chamada direta do browser à FastAPI em produção.
+    """
+    is_online = calculadora_client.ping()
+    try:
+        indices = calculadora_client.obter_indices_padrao()
+        n_indices = len(indices)
+    except Exception:
+        n_indices = 0
+    return JsonResponse({'api_online': is_online, 'indices_configurados': n_indices})
+
+
+@require_http_methods(["GET"])
+def api_proxy_indices_padrao(request):
+    """
+    GET /api/indices-padrao — retorna os índices de correção da FastAPI.
+    """
+    try:
+        indices = calculadora_client.obter_indices_padrao()
+        return JsonResponse({'indices': indices})
+    except APIException as e:
+        return JsonResponse({'error': str(e), 'indices': {}}, status=502)
+    except Exception as e:
+        return JsonResponse({'error': str(e), 'indices': {}}, status=502)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_proxy_upload_pdf(request):
+    """
+    POST /api/upload-pdf — recebe o PDF do browser e encaminha à FastAPI
+    para extração de dados de créditos (parse do PDF).
+
+    O browser envia multipart/form-data com campo 'file'.
+    Retorna JSON com: { beneficiario, creditos, quantidade, ... }
+    """
+    pdf_file = request.FILES.get('file')
+    if not pdf_file:
+        return JsonResponse({'error': 'Nenhum PDF enviado (campo "file" esperado)'}, status=400)
+
+    try:
+        files = {'file': (pdf_file.name, pdf_file.read(), 'application/pdf')}
+        response = _requests.post(
+            f'{calculadora_client.base_url}/api/upload-pdf',
+            files=files,
+            timeout=30,
+        )
+        if not response.ok:
+            try:
+                detail = response.json().get('detail', response.text)
+            except Exception:
+                detail = response.text
+            return JsonResponse({'error': f'Erro na API: {detail}'}, status=502)
+        return JsonResponse(response.json())
+    except _requests.Timeout:
+        return JsonResponse({'error': 'Timeout ao processar PDF (>30s)'}, status=504)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=502)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_proxy_gerar_pdf(request):
+    """
+    POST /api/gerar-relatorio-pdf — repassa o payload JSON à FastAPI
+    e retorna o PDF como application/pdf (para download direto no browser).
+
+    Nota: para SALVAR o PDF na tarefa use o endpoint /tarefas/tarefa/<id>/gerar-salvar-pdf/
+    Este proxy é usado quando o usuário quer baixar o PDF sem anexar à tarefa.
+    """
+    try:
+        import json
+        data = json.loads(request.body)
+        response = _requests.post(
+            f'{calculadora_client.base_url}/api/gerar-relatorio-pdf',
+            json=data,
+            headers={'Content-Type': 'application/json'},
+            timeout=60,
+        )
+        if not response.ok:
+            return JsonResponse({'error': f'Erro na API: {response.status_code}'}, status=502)
+        return HttpResponse(response.content, content_type='application/pdf')
+    except _requests.Timeout:
+        return JsonResponse({'error': 'Timeout ao gerar PDF (>60s)'}, status=504)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_proxy_gerar_excel(request):
+    """
+    POST /api/gerar-excel — repassa o payload JSON à FastAPI
+    e retorna o Excel como application/vnd.openxmlformats-officedocument.
+    """
+    try:
+        import json
+        data = json.loads(request.body)
+        response = _requests.post(
+            f'{calculadora_client.base_url}/api/gerar-excel',
+            json=data,
+            headers={'Content-Type': 'application/json'},
+            timeout=60,
+        )
+        if not response.ok:
+            return JsonResponse({'error': f'Erro na API: {response.status_code}'}, status=502)
+        return HttpResponse(
+            response.content,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+    except _requests.Timeout:
+        return JsonResponse({'error': 'Timeout ao gerar Excel (>60s)'}, status=504)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)

@@ -16,7 +16,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('tarefas/', include('tarefas.urls')),
     path('gru/', include('tarefas.gru.urls')),
-
+    # Proxy /api/* → FastAPI (usado em produção quando API_BASE = '/api')
+    path('api/', include('tarefas.urls_api')),
 ]
 
 # Servir static files
