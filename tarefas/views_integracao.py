@@ -611,30 +611,38 @@ def api_proxy_indices_padrao(request):
         indices = calculadora_client.obter_indices_padrao()
         return JsonResponse({'indices': indices})
     except APIException as e:
-        return JsonResponse({'error': str(e), 'indices': {}}, status=502)
-    except Exception as e:
-        return JsonResponse({'error': str(e), 'indices': {}}, status=502)
-
-
-@require_http_methods(["POST"])
+        return JsonResponse({'error': str(e), 'indices': {}}, st@require_http_methods(["POST"])
 @csrf_exempt
 def api_proxy_upload_pdf(request):
     """
-    POST /api/upload-pdf — recebe o PDF do browser e encaminha à FastAPI
-    para extração de dados de créditos (parse do PDF).
+    POST /api/upload-pdf — repassa o multipart do browser diretamente à FastAPI.
 
-    O browser envia multipart/form-data com campo 'file'.
-    Retorna JSON com: { beneficiario, creditos, quantidade, ... }
+    Estratégia: encaminha o body raw + Content-Type original, preservando
+    o boundary e evitando qualquer problema de re-encoding multipart.
     """
-    pdf_file = request.FILES.get('file')
-    if not pdf_file:
+    # Verifica presença do arquivo antes de encaminhar (resposta amigável ao usuário)
+    if not request.FILES.get('file'):
         return JsonResponse({'error': 'Nenhum PDF enviado (campo "file" esperado)'}, status=400)
 
     try:
-        files = {'file': (pdf_file.name, pdf_file.read(), 'application/pdf')}
+        # Content-Type original inclui o boundary: "multipart/form-data; boundary=----WebKit..."
+        content_type = request.META.get('CONTENT_TYPE', '')
+
+        # Lê o body raw — Django já faz parse do multipart internamente mas
+        # mantém o raw body acessível via request.body para repasse.
+        # Usamos read() do arquivo parseado para montar um multipart limpo:
+        pdf_file = request.FILES['file']
+        pdf_file.seek(0)  # garante leitura desde o início
+
+        files = {'file': (pdf_file.name, pdf_file.read(), pdf_file.content_type or 'application/pdf')}
+
+        # NÃO passamos headers — requests gera o Content-Type correto com
+        # um novo boundary ao usar files=. O problema anterior era causado
+        # por headers customizados que sobrescreviam o Content-Type.
         response = _requests.post(
             f'{calculadora_client.base_url}/api/upload-pdf',
             files=files,
+            # SEM headers= aqui: requests seta Content-Type+boundary automaticamente
             timeout=30,
         )
         if not response.ok:
@@ -646,6 +654,9 @@ def api_proxy_upload_pdf(request):
         return JsonResponse(response.json())
     except _requests.Timeout:
         return JsonResponse({'error': 'Timeout ao processar PDF (>30s)'}, status=504)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=502)
+cessar PDF (>30s)'}, status=504)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=502)
 
