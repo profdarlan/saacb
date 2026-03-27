@@ -1002,7 +1002,7 @@ async function gerarEAnexarPDF(event) {
         };
 
         // Gerar PDF via API externa
-        const pdfResponse = await fetch(`${API_BASE}/api/gerar-relatorio-pdf`, {
+        const pdfResponse = await fetch(`${API_BASE}/gerar-relatorio-pdf`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -1074,7 +1074,7 @@ async function gerarExcel() {
     };
 
     try {
-        const r = await fetch(`${API_BASE}/api/gerar-excel`, {
+        const r = await fetch(`${API_BASE}/gerar-excel`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -1119,7 +1119,7 @@ async function gerarPDF() {
     };
 
     try {
-        const r = await fetch(`${API_BASE}/api/gerar-relatorio-pdf`, {
+        const r = await fetch(`${API_BASE}/gerar-relatorio-pdf`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
