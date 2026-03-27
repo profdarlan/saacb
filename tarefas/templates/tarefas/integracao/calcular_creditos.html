@@ -387,20 +387,40 @@
     </div>
 </div>
 
+{% comment %}Serialização segura dos campos da tarefa — json_script garante escapes corretos{% endcomment %}
+{{ tarefa.valor_original_calculado|default_if_none:0|json_script:"dtj-orig" }}
+{{ tarefa.valor_corrigido_calculado|default_if_none:0|json_script:"dtj-corr" }}
+{{ tarefa.valor_diferenca|default_if_none:0|json_script:"dtj-dif" }}
+{{ tarefa.detalhes_calculo|json_script:"dtj-det" }}
+{{ tarefa.calculos_aprovados|json_script:"dtj-aprov" }}
+
 <script>
 // ============================================================
-// DADOS SALVOS DA TAREFA (passados do Django)
+// CONFIG — deve vir ANTES de qualquer fetch
 // ============================================================
-const DADOS_SALVOS_TAREFA = {
-    valor_original_calculado: {{ tarefa.valor_original_calculado|default_if_none:0 }},
-    valor_corrigido_calculado: {{ tarefa.valor_corrigido_calculado|default_if_none:0 }},
-    valor_diferenca: {{ tarefa.valor_diferenca|default_if_none:0 }},
-    detalhes_calculo: {% if tarefa.detalhes_calculo %}{{ tarefa.detalhes_calculo|safe }}{% else %}null{% endif %},
-    calculado_em: "{% if tarefa.calculado_em %}{{ tarefa.calculado_em|date:'d/m/Y H:i' }}{% endif %}",
-    calculos_aprovados: {{ tarefa.calculos_aprovados|yesno:"true,false" }},
-    relatorio_pdf: "{% if tarefa.relatorio_pdf %}{{ tarefa.relatorio_pdf.url }}{% endif %}"
-};
+const isProduction = window.location.hostname === 'saacb.lakeserver.online';
+const API_BASE = isProduction ? '/api' : 'http://192.168.1.51:8002/api';
 
+// ============================================================
+// DADOS SALVOS DA TAREFA (via json_script — serialização segura)
+// Decimal → float, None → null, bool → true/false garantidos.
+// ============================================================
+(function() {
+    function _js(id, fallback) {
+        const el = document.getElementById(id);
+        try { return el ? JSON.parse(el.textContent) : fallback; } catch(e) { return fallback; }
+    }
+    window.DADOS_SALVOS_TAREFA = {
+        valor_original_calculado: _js('dtj-orig', 0),
+        valor_corrigido_calculado: _js('dtj-corr', 0),
+        valor_diferenca: _js('dtj-dif', 0),
+        detalhes_calculo: _js('dtj-det', null),
+        calculado_em: "{% if tarefa.calculado_em %}{{ tarefa.calculado_em|date:'d/m/Y H:i' }}{% endif %}",
+        calculos_aprovados: _js('dtj-aprov', false),
+        relatorio_pdf: "{% if tarefa.relatorio_pdf %}{{ tarefa.relatorio_pdf.url }}{% endif %}"
+    };
+})();
+const DADOS_SALVOS_TAREFA = window.DADOS_SALVOS_TAREFA;
 
 // ============================================================
 // CARREGAR ÍNDICES PADRÃO DA API EXTERNA
@@ -450,12 +470,6 @@ function atualizarDebug() {
         ultimoResultado: window.ultimoResultado
     }, null, 2);
 }
-
-// ============================================================
-// CONFIG
-// ============================================================
-const isProduction = window.location.hostname === 'saacb.lakeserver.online';
-const API_BASE = isProduction ? '/api' : 'http://192.168.1.51:8002/api';
 
 window.dadosPdf = { creditos: [], beneficiario: null };
 window.indicesPadrao = {};
