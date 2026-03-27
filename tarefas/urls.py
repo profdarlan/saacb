@@ -32,6 +32,7 @@ urlpatterns = [
     path('tarefa/<int:tarefa_id>/excel/', integracao.baixar_relatorio_excel, name='integracao_baixar_excel'),
     path('api/status/', integracao.status_api, name='integracao_status_api'),
     path('tarefa/<int:tarefa_id>/aprovar-valor/', integracao.aprovar_valor, name='integracao_aprovar_valor'),
+    path('tarefa/<int:tarefa_id>/gerar-salvar-pdf/', integracao.gerar_e_salvar_pdf_tarefa, name='integracao_gerar_salvar_pdf'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('dashboard-data/', DashboardDataView.as_view(), name='dashboard-data'),
 ]   

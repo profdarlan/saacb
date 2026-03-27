@@ -297,20 +297,21 @@ def remover_pdf_tarefa(request, tarefa_id):
 @require_http_methods(["POST"])
 def baixar_relatorio_pdf(request, tarefa_id):
     """
-    Gera e baixa relatório PDF de uma tarefa
+    Gera e baixa relatório PDF de uma tarefa.
+    Funciona mesmo que detalhes_calculo não tenha campo 'id' (salvo pelo frontend).
     """
     tarefa = get_object_or_404(tarefassamc, id=tarefa_id)
 
-    # Verificar se já tem cálculo salvo
     if not tarefa.detalhes_calculo:
         messages.error(request, "Esta tarefa ainda não foi calculada.")
         return redirect('tarefas:tarefa_detail', pk=tarefa.id)
 
     try:
-        # Recuperar resultado do cálculo
+        detalhes = tarefa.detalhes_calculo
         resultado = CalculoResultado(
-            id=tarefa.detalhes_calculo['id'],
-            timestamp=tarefa.detalhes_calculo['timestamp'],
+            # 'id' pode não existir quando salvo pelo frontend — usa fallback
+            id=detalhes.get('id', f'tarefa-{tarefa.id}'),
+            timestamp=detalhes.get('timestamp', timezone.now().isoformat()),
             beneficiario=BeneficiarioData(
                 numero_beneficio=tarefa.nb1 or tarefa.nb2 or '',
                 nome_titular=tarefa.nome_interessado or '',
@@ -318,16 +319,14 @@ def baixar_relatorio_pdf(request, tarefa_id):
                 periodo_debito_fim='',
                 is_recebimento_indevido=False
             ),
-            resultados=tarefa.detalhes_calculo['resultados'],
-            total_original=tarefa.valor_original_calculado,
-            total_corrigido=tarefa.valor_corrigido_calculado,
-            diferenca=tarefa.valor_diferenca
+            resultados=detalhes.get('resultados', []),
+            total_original=float(tarefa.valor_original_calculado or 0),
+            total_corrigido=float(tarefa.valor_corrigido_calculado or 0),
+            diferenca=float(tarefa.valor_diferenca or 0),
         )
 
-        # Gerar PDF
         pdf_content = calculadora_client.gerar_pdf(resultado)
 
-        # Retornar como attachment
         response = HttpResponse(pdf_content, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="relatorio_calculo_{tarefa.id}.pdf"'
         return response
@@ -335,6 +334,82 @@ def baixar_relatorio_pdf(request, tarefa_id):
     except APIException as e:
         messages.error(request, f"Erro ao gerar PDF: {str(e)}")
         return redirect('tarefas:tarefa_detail', pk=tarefa.id)
+
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def gerar_e_salvar_pdf_tarefa(request, tarefa_id):
+    """
+    Gera PDF via API FastAPI de forma server-side (sem CORS) e salva
+    diretamente no campo relatorio_pdf da tarefa.
+
+    O browser chama este endpoint Django (mesma origem), que por sua vez
+    chama a API FastAPI internamente — eliminando qualquer problema de CORS.
+
+    Payload JSON esperado:
+    {
+        "beneficiario": { numero_beneficio, nome_titular, periodo_debito_inicio,
+                          periodo_debito_fim, is_recebimento_indevido },
+        "resultados": [ { competencia, valor_original, indice_correcao,
+                          valor_corrigido, diferenca, periodo_inicio, periodo_fim } ],
+        "total_original": float,
+        "total_corrigido": float,
+        "diferenca": float
+    }
+    """
+    tarefa = get_object_or_404(tarefassamc, id=tarefa_id)
+
+    try:
+        import json
+        from django.core.files.base import ContentFile
+
+        data = json.loads(request.body.decode('utf-8'))
+
+        beneficiario_data = data.get('beneficiario', {})
+        resultados = data.get('resultados', [])
+
+        if not resultados:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Nenhum resultado de cálculo fornecido.'
+            }, status=400)
+
+        resultado = CalculoResultado(
+            id=f'tarefa-{tarefa.id}',
+            timestamp=timezone.now().isoformat(),
+            beneficiario=BeneficiarioData(
+                numero_beneficio=beneficiario_data.get('numero_beneficio', tarefa.nb1 or ''),
+                nome_titular=beneficiario_data.get('nome_titular', tarefa.nome_interessado or ''),
+                periodo_debito_inicio=beneficiario_data.get('periodo_debito_inicio', ''),
+                periodo_debito_fim=beneficiario_data.get('periodo_debito_fim', ''),
+                is_recebimento_indevido=beneficiario_data.get('is_recebimento_indevido', False),
+            ),
+            resultados=resultados,
+            total_original=float(data.get('total_original', 0)),
+            total_corrigido=float(data.get('total_corrigido', 0)),
+            diferenca=float(data.get('diferenca', 0)),
+        )
+
+        # Chamada server-to-server — sem CORS
+        pdf_content = calculadora_client.gerar_pdf(resultado)
+
+        # Apaga PDF anterior se existir
+        if tarefa.relatorio_pdf:
+            tarefa.relatorio_pdf.delete(save=False)
+
+        nome_arquivo = f'relatorio_calculo_{tarefa.id}.pdf'
+        tarefa.relatorio_pdf.save(nome_arquivo, ContentFile(pdf_content), save=True)
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'PDF gerado e salvo com sucesso.',
+            'url': tarefa.relatorio_pdf.url,
+        })
+
+    except APIException as e:
+        return JsonResponse({'status': 'error', 'message': f'Erro na API de cálculos: {str(e)}'}, status=502)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 
 @require_http_methods(["POST"])

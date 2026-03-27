@@ -392,12 +392,12 @@
 // DADOS SALVOS DA TAREFA (passados do Django)
 // ============================================================
 const DADOS_SALVOS_TAREFA = {
-    valor_original_calculado: {{ tarefa.valor_original_calculado|default:0 }},
-    valor_corrigido_calculado: {{ tarefa.valor_corrigido_calculado|default:0 }},
-    valor_diferenca: {{ tarefa.valor_diferenca|default:0 }},
+    valor_original_calculado: {{ tarefa.valor_original_calculado|default_if_none:0 }},
+    valor_corrigido_calculado: {{ tarefa.valor_corrigido_calculado|default_if_none:0 }},
+    valor_diferenca: {{ tarefa.valor_diferenca|default_if_none:0 }},
     detalhes_calculo: {% if tarefa.detalhes_calculo %}{{ tarefa.detalhes_calculo|safe }}{% else %}null{% endif %},
     calculado_em: "{% if tarefa.calculado_em %}{{ tarefa.calculado_em|date:'d/m/Y H:i' }}{% endif %}",
-    calculos_aprovados: {{ tarefa.calculos_aprovados|lower|yesno:"true,false" }},
+    calculos_aprovados: {{ tarefa.calculos_aprovados|yesno:"true,false" }},
     relatorio_pdf: "{% if tarefa.relatorio_pdf %}{{ tarefa.relatorio_pdf.url }}{% endif %}"
 };
 
@@ -973,77 +973,55 @@ async function gerarEAnexarPDF(event) {
         return;
     }
 
-    const btn = checkbox;
-    const textoOriginal = btn.parentElement.innerHTML;
-    btn.disabled = true;
+    checkbox.disabled = true;
 
     try {
         const tarefaId = '{{ tarefa.id }}';
 
-        // Tentar gerar o PDF e anexar via API externa
-        const payload = {
-            beneficiario: {
-                numero_beneficio: document.getElementById('numerobeneficio').value,
-                nome_titular: document.getElementById('nometitular').value,
-                periodo_debito_inicio: document.getElementById('periodoinicio').value,
-                periodo_debito_fim: document.getElementById('periodofim').value,
-                is_recebimento_indevido: document.getElementById('recebimentoindevido').checked
-            },
-            creditos: window.resultadosEditaveis.map(r => ({
-                competencia: r.competencia,
-                periodo_inicio: r.periodo_inicio,
-                periodo_fim: r.periodo_fim,
-                valor_original: r.valor_original
-            })),
-            indices: window.resultadosEditaveis.map(r => ({
-                competencia: r.competencia,
-                indice: r.indice_correcao
-            }))
-        };
+        // Calcula totais a partir dos resultados editáveis
+        const totalOriginal = window.resultadosEditaveis.reduce((s, r) => s + r.valor_original, 0);
+        const totalCorrigido = window.resultadosEditaveis.reduce((s, r) => s + r.valor_corrigido, 0);
 
-        // Gerar PDF via API externa
-        const pdfResponse = await fetch(`${API_BASE}/gerar-relatorio-pdf`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!pdfResponse.ok) {
-            throw new Error('Erro ao gerar PDF na API externa');
-        }
-
-        const pdfBlob = await pdfResponse.blob();
-
-        // Enviar o PDF gerado para a view de upload
-        const formData = new FormData();
-        formData.append('relatorio_pdf', pdfBlob, `relatorio_calculo_${tarefaId}.pdf`);
-
-        const uploadResponse = await fetch(`/tarefas/tarefa/${tarefaId}/upload-pdf/`, {
+        // Chama o endpoint Django proxy (mesma origem, sem CORS).
+        // O Django faz a chamada server-to-server para a API FastAPI.
+        const response = await fetch(`/tarefas/tarefa/${tarefaId}/gerar-salvar-pdf/`, {
             method: 'POST',
             headers: {
+                'Content-Type': 'application/json',
                 'X-CSRFToken': getCsrfToken()
             },
-            body: formData
+            body: JSON.stringify({
+                beneficiario: {
+                    numero_beneficio: document.getElementById('numerobeneficio').value,
+                    nome_titular: document.getElementById('nometitular').value,
+                    periodo_debito_inicio: document.getElementById('periodoinicio').value,
+                    periodo_debito_fim: document.getElementById('periodofim').value,
+                    is_recebimento_indevido: document.getElementById('recebimentoindevido').checked
+                },
+                resultados: window.resultadosEditaveis,
+                total_original: totalOriginal,
+                total_corrigido: totalCorrigido,
+                diferenca: totalCorrigido - totalOriginal
+            })
         });
 
-        if (!uploadResponse.ok) {
-            const error = await uploadResponse.json();
-            throw new Error('Erro ao anexar PDF: ' + (error.error || error.message));
+        const data = await response.json();
+
+        if (!response.ok || data.status === 'error') {
+            throw new Error(data.message || 'Erro ao gerar PDF');
         }
 
         showAlert('✅ PDF gerado e anexado com sucesso!', 'success');
 
         // Recarregar a página para mostrar o novo PDF
-        setTimeout(() => {
-            window.location.reload();
-        }, 1500);
+        setTimeout(() => { window.location.reload(); }, 1500);
 
     } catch (error) {
         console.error('Erro ao gerar/anexar PDF:', error);
-        showAlert('Erro ao gerar/anexar PDF. Use o botão "Gerar PDF" manualmente.', 'error');
+        showAlert('Erro ao gerar PDF: ' + error.message, 'error');
         checkbox.checked = false;
     } finally {
-        btn.disabled = false;
+        checkbox.disabled = false;
     }
 }
 
